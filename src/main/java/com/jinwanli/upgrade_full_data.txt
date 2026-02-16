@@ -1,410 +1,156 @@
-#!/bin/bash
+为了让 PDF 预览功能生效，您必须完成以下 3 个关键步骤。请检查您的代码是否包含这些内容：
 
-echo "1. 升级数据模型 Employee.java (增加电话和身份证)..."
-cat > model/Employee.java <<EOF
-package com.jinwanli.model;
+1. 检查 pom.xml (缺少依赖)
+您上传的 pom.xml 文件中 缺少 pdfbox 依赖。没有这个库，Java 无法生成 PDF。
 
-import java.io.Serializable;
-import java.util.Objects;
+请修改 pom.xml，在 <dependencies> 标签内添加以下代码：
 
-public class Employee implements Serializable {
-    private static final long serialVersionUID = 1L;
-    private String id;
-    private String name;
-    private String position;
-    private String phone;   // 新增：联系电话
-    private String idCard;  // 新增：身份证号
-    private double baseSalary;
-    private double performanceSalary;
-    private double overtimeSalary;
-    private String status; // 已发放/未发放
+XML
+    <dependency>
+        <groupId>org.apache.pdfbox</groupId>
+        <artifactId>pdfbox</artifactId>
+        <version>2.0.29</version>
+    </dependency>
+2. 检查是否创建了 PdfUtils.java
+您的文件列表中似乎没有 PdfUtils.java。这是生成 PDF 的核心工具类。如果没有它，其他面板无法调用打印功能。
 
-    public Employee(String id, String name, String position, String phone, String idCard, double baseSalary, double performanceSalary, double overtimeSalary) {
-        this.id = id;
-        this.name = name;
-        this.position = position;
-        this.phone = phone;
-        this.idCard = idCard;
-        this.baseSalary = baseSalary;
-        this.performanceSalary = performanceSalary;
-        this.overtimeSalary = overtimeSalary;
-        this.status = "未发放";
-    }
+请在 com.jinwanli 包下新建 PdfUtils.java 文件：
 
-    public double getTotalSalary() { return baseSalary + performanceSalary + overtimeSalary; }
-    
-    // Getters
-    public String getId() { return id; }
-    public String getName() { return name; }
-    public String getPosition() { return position; }
-    public String getPhone() { return phone; }
-    public String getIdCard() { return idCard; }
-    public double getBaseSalary() { return baseSalary; }
-    public double getPerformanceSalary() { return performanceSalary; }
-    public double getOvertimeSalary() { return overtimeSalary; }
-    public String getStatus() { return status; }
-    
-    public void setStatus(String status) { this.status = status; }
-    
-    @Override
-    public String toString() { return name; }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Employee employee = (Employee) o;
-        return Objects.equals(id, employee.id);
-    }
-
-    @Override
-    public int hashCode() { return Objects.hash(id); }
-}
-EOF
-
-echo "2. 创建员工录入弹窗 EmployeeDialog.java..."
-cat > EmployeeDialog.java <<EOF
+Java
 package com.jinwanli;
 
-import com.jinwanli.model.Employee;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
+
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Map;
 
-public class EmployeeDialog extends JDialog {
-    private JTextField nameField = new JTextField(10);
-    private JComboBox<String> posBox = new JComboBox<>(new String[]{"员工", "经理", "主管", "临时工"});
-    private JTextField phoneField = new JTextField(10);
-    private JTextField idCardField = new JTextField(10);
-    private JTextField salaryField = new JTextField(10);
-    
-    private boolean confirmed = false;
+public class PdfUtils {
+    public static void generateAndOpenPdf(String docName, String title, Map<String, String> content, String footer) {
+        try {
+            PDDocument document = new PDDocument();
+            PDPage page = new PDPage();
+            document.addPage(page);
 
-    public EmployeeDialog(JFrame parent) {
-        super(parent, "录入员工信息", true);
-        setLayout(new GridLayout(6, 2, 10, 10));
-        setSize(320, 300);
-        setLocationRelativeTo(parent);
-
-        add(new JLabel("姓名:")); add(nameField);
-        add(new JLabel("职位:")); add(posBox);
-        add(new JLabel("联系电话:")); add(phoneField);
-        add(new JLabel("身份证号:")); add(idCardField);
-        add(new JLabel("基本工资(元):")); add(salaryField);
-
-        JButton saveBtn = new JButton("保存");
-        saveBtn.addActionListener(e -> {
-            if(nameField.getText().trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this, "姓名不能为空");
+            // 尝试加载中文字体（确保您电脑上有这些字体，否则中文会乱码）
+            PDFont font = loadChineseFont(document);
+            if (font == null) {
+                JOptionPane.showMessageDialog(null, "错误：未找到中文字体(SimHei/MsYaHei)，PDF可能无法显示中文。");
                 return;
             }
-            confirmed = true;
-            setVisible(false);
-        });
-        add(saveBtn);
-        
-        JButton cancelBtn = new JButton("取消");
-        cancelBtn.addActionListener(e -> setVisible(false));
-        add(cancelBtn);
-    }
 
-    public Employee getData() {
-        if (!confirmed) return null;
-        try {
-            String name = nameField.getText();
-            String pos = (String) posBox.getSelectedItem();
-            String phone = phoneField.getText();
-            String idCard = idCardField.getText();
-            double salary = Double.parseDouble(salaryField.getText());
+            PDPageContentStream contentStream = new PDPageContentStream(document, page);
+            float y = 750;
+            float margin = 50;
+
+            // 绘制标题
+            contentStream.beginText();
+            contentStream.setFont(font, 24);
+            contentStream.newLineAtOffset(margin, y);
+            contentStream.showText(title);
+            contentStream.endText();
+            y -= 40;
+
+            // 绘制内容
+            contentStream.beginText();
+            contentStream.setFont(font, 14);
+            contentStream.setLeading(25f);
+            contentStream.newLineAtOffset(margin, y);
             
-            // 自动生成ID (E + 时间戳后5位)
-            String id = "E" + (System.currentTimeMillis() % 100000);
-            
-            return new Employee(id, name, pos, phone, idCard, salary, 0, 0);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "工资请输入数字！");
-            return null;
-        }
-    }
-}
-EOF
-
-echo "3. 更新 DataManager.java (适配新构造函数)..."
-# 注意：这里我们只更新构造函数调用的部分，为了稳妥，重写整个类
-cat > DataManager.java <<EOF
-package com.jinwanli;
-
-import com.jinwanli.model.*;
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
-public class DataManager {
-    private static DataManager instance;
-    private List<Employee> employees;
-    private List<SalesRecord> salesRecords;
-    private List<ExpenseRecord> expenseRecords;
-    private List<AttendanceRecord> attendanceRecords;
-    
-    private static final String DATA_DIR = "data";
-
-    private DataManager() {
-        File dir = new File(DATA_DIR);
-        if (!dir.exists()) dir.mkdirs();
-        
-        employees = loadList("employees.dat");
-        salesRecords = loadList("sales.dat");
-        expenseRecords = loadList("expenses.dat");
-        attendanceRecords = loadList("attendance.dat");
-        
-        // 初始化演示数据 (如果没有数据)
-        if (employees.isEmpty()) {
-            // 注意：这里更新了构造函数，增加了电话和身份证
-            employees.add(new Employee("E001", "张三", "经理", "13800138000", "110101199001011234", 8000, 2000, 500));
-            employees.add(new Employee("E002", "李四", "员工", "13900139000", "110101199202025678", 5000, 1000, 200));
-            saveEmployees();
-        }
-    }
-
-    public static DataManager getInstance() {
-        if (instance == null) instance = new DataManager();
-        return instance;
-    }
-
-    // --- 核心：按月获取考勤记录 ---
-    public List<AttendanceRecord> getAttendanceByMonth(String year, String month) {
-        String prefix1 = year + "-" + (month.length() == 1 ? "0"+month : month) + "-";
-        String prefix2 = year + "-" + Integer.parseInt(month) + "-";
-        return attendanceRecords.stream()
-                .filter(r -> r.getDate().startsWith(prefix1) || r.getDate().startsWith(prefix2))
-                .collect(Collectors.toList());
-    }
-
-    public void addAttendanceRecord(AttendanceRecord r) {
-        attendanceRecords.removeIf(old -> old.getEmployeeId().equals(r.getEmployeeId()) && old.getDate().equals(r.getDate()));
-        attendanceRecords.add(r);
-        saveList(attendanceRecords, "attendance.dat");
-    }
-
-    // --- 基础 Getter/Setter ---
-    public List<Employee> getEmployees() { return employees; }
-    public void addEmployee(Employee e) { employees.add(e); saveEmployees(); }
-    public void removeEmployee(int idx) { if(idx>=0 && idx<employees.size()){ employees.remove(idx); saveEmployees(); }}
-    private void saveEmployees() { saveList(employees, "employees.dat"); }
-
-    public List<SalesRecord> getSalesRecords() { return salesRecords; }
-    public void addSalesRecord(SalesRecord s) { salesRecords.add(s); saveList(salesRecords, "sales.dat"); }
-    public void removeSalesRecord(int idx) { if(idx>=0){ salesRecords.remove(idx); saveList(salesRecords, "sales.dat"); }}
-
-    public List<ExpenseRecord> getExpenseRecords() { return expenseRecords; }
-    public void addExpenseRecord(ExpenseRecord e) { expenseRecords.add(e); saveList(expenseRecords, "expenses.dat"); }
-    public void removeExpenseRecord(int idx) { if(idx>=0){ expenseRecords.remove(idx); saveList(expenseRecords, "expenses.dat"); }}
-    
-    @SuppressWarnings("unchecked")
-    private <T> List<T> loadList(String filename) {
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(DATA_DIR + File.separator + filename))) {
-            return (List<T>) ois.readObject();
-        } catch (Exception e) { return new ArrayList<>(); }
-    }
-    private <T> void saveList(List<T> list, String filename) {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(DATA_DIR + File.separator + filename))) {
-            oos.writeObject(list);
-        } catch (IOException e) { e.printStackTrace(); }
-    }
-}
-EOF
-
-echo "4. 更新 AttendancePanel.java (显示新列并调用新弹窗)..."
-cat > AttendancePanel.java <<EOF
-package com.jinwanli;
-
-import com.jinwanli.model.AttendanceRecord;
-import com.jinwanli.model.Employee;
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.util.Calendar;
-import java.util.List;
-import java.util.stream.Collectors;
-
-public class AttendancePanel extends JPanel {
-    private JTabbedPane tabbedPane;
-    private JTable monthlyTable;
-    private DefaultTableModel monthlyModel;
-    private JComboBox<String> yearBox;
-    private JComboBox<String> monthBox;
-
-    public AttendancePanel() {
-        setLayout(new BorderLayout());
-        setBackground(UIUtils.COLOR_BG_MAIN);
-        add(UIUtils.createTitlePanel("员工考勤管理"), BorderLayout.NORTH);
-        
-        tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(UIUtils.FONT_TAB);
-        
-        tabbedPane.addTab("月考勤表", createMonthlyView());
-        tabbedPane.addTab("员工档案管理", createEmployeeView());
-        
-        add(tabbedPane, BorderLayout.CENTER);
-    }
-
-    private JPanel createMonthlyView() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(UIUtils.COLOR_BG_MAIN);
-        
-        JPanel queryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        queryPanel.setBackground(UIUtils.COLOR_BG_CONTROL);
-        
-        queryPanel.add(new JLabel("年份:"));
-        yearBox = new JComboBox<>(UIUtils.getRecentYears());
-        yearBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
-        queryPanel.add(yearBox);
-        
-        queryPanel.add(new JLabel("月份:"));
-        monthBox = new JComboBox<>(new String[]{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"});
-        monthBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.MONTH) + 1));
-        queryPanel.add(monthBox);
-        
-        JButton queryBtn = UIUtils.createButton("刷新");
-        queryBtn.addActionListener(e -> refreshMonthlyTable());
-        queryPanel.add(queryBtn);
-        
-        JButton addBtn = UIUtils.createButton("录入考勤");
-        addBtn.addActionListener(e -> {
-            AttendanceDialog dialog = new AttendanceDialog((JFrame) SwingUtilities.getWindowAncestor(this));
-            dialog.setVisible(true);
-            AttendanceRecord record = dialog.getData();
-            if (record != null) {
-                DataManager.getInstance().addAttendanceRecord(record);
-                refreshMonthlyTable();
+            for (Map.Entry<String, String> entry : content.entrySet()) {
+                contentStream.showText(entry.getKey() + "    " + entry.getValue());
+                contentStream.newLine();
+                y -= 25;
             }
-        });
-        queryPanel.add(addBtn);
-        
-        panel.add(queryPanel, BorderLayout.NORTH);
-        
-        String[] columnNames = new String[33];
-        columnNames[0] = "姓名";
-        for (int i = 1; i <= 31; i++) columnNames[i] = i + "日";
-        columnNames[32] = "ID";
+            contentStream.endText();
 
-        monthlyModel = new DefaultTableModel(columnNames, 0) {
-            @Override public boolean isCellEditable(int row, int column) { return false; }
-        };
-        
-        monthlyTable = new JTable(monthlyModel);
-        monthlyTable.setRowHeight(30);
-        monthlyTable.setFont(UIUtils.FONT_NORMAL);
-        monthlyTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        monthlyTable.getColumnModel().getColumn(0).setPreferredWidth(80);
-        for (int i = 1; i <= 31; i++) monthlyTable.getColumnModel().getColumn(i).setPreferredWidth(40);
-        
-        panel.add(new JScrollPane(monthlyTable), BorderLayout.CENTER);
-        refreshMonthlyTable();
-        return panel;
-    }
+            // 绘制页脚
+            y -= 50;
+            contentStream.beginText();
+            contentStream.setFont(font, 12);
+            contentStream.newLineAtOffset(margin, y);
+            String[] footerLines = footer.split("\n");
+            for (String line : footerLines) {
+                contentStream.showText(line);
+                contentStream.newLine(); // 注意：PDFBox简单模式下newLine可能需要重新定位Y坐标，这里简化处理
+            }
+            contentStream.endText();
 
-    private void refreshMonthlyTable() {
-        monthlyModel.setRowCount(0);
-        String year = (String) yearBox.getSelectedItem();
-        String month = (String) monthBox.getSelectedItem();
-        
-        List<Employee> employees = DataManager.getInstance().getEmployees();
-        List<AttendanceRecord> monthRecords = DataManager.getInstance().getAttendanceByMonth(year, month);
-        
-        for (Employee emp : employees) {
-            Object[] rowData = new Object[33];
-            rowData[0] = emp.getName();
-            rowData[32] = emp.getId();
-            
-            List<AttendanceRecord> myRecords = monthRecords.stream()
-                    .filter(r -> r.getEmployeeId().equals(emp.getId()))
-                    .collect(Collectors.toList());
-            
-            for (AttendanceRecord r : myRecords) {
-                int day = r.getDayOfMonth();
-                if (day >= 1 && day <= 31) {
-                    String symbol = "√";
-                    if ("迟到".equals(r.getStatus())) symbol = "L";
-                    else if ("早退".equals(r.getStatus())) symbol = "E";
-                    else if ("缺勤".equals(r.getStatus())) symbol = "X";
-                    if (r.getOvertimeHours() > 0) symbol += "(+" + (int)r.getOvertimeHours() + ")";
-                    rowData[day] = symbol;
-                }
-            }
-            monthlyModel.addRow(rowData);
-        }
-    }
+            contentStream.close();
 
-    // --- 员工档案管理 (Updated) ---
-    private JPanel createEmployeeView() {
-        JPanel panel = new JPanel(new BorderLayout());
-        
-        // 更新表格列：增加 电话、身份证
-        String[] cols = {"工号", "姓名", "职位", "联系电话", "身份证号", "基本工资(元)"};
-        DefaultTableModel model = new DefaultTableModel(cols, 0) {
-            @Override public boolean isCellEditable(int row, int col) { return false; }
-        };
-        JTable table = new JTable(model);
-        table.setRowHeight(30);
-        table.setFont(UIUtils.FONT_NORMAL);
-        table.getTableHeader().setBackground(UIUtils.COLOR_BG_CONTROL);
-        
-        // 刷新员工表数据逻辑
-        Runnable refreshEmp = () -> {
-            model.setRowCount(0);
-            for(Employee e : DataManager.getInstance().getEmployees()) {
-                model.addRow(new Object[]{
-                    e.getId(), 
-                    e.getName(), 
-                    e.getPosition(), 
-                    e.getPhone(),    // 显示电话
-                    e.getIdCard(),   // 显示身份证
-                    e.getBaseSalary()
-                });
-            }
-        };
-        refreshEmp.run();
-        
-        JPanel btnPanel = new JPanel();
-        btnPanel.setBackground(UIUtils.COLOR_BG_CONTROL);
-        
-        JButton addBtn = UIUtils.createButton("添加员工");
-        addBtn.addActionListener(e -> {
-            // 使用新的 EmployeeDialog
-            EmployeeDialog dialog = new EmployeeDialog((JFrame) SwingUtilities.getWindowAncestor(this));
-            dialog.setVisible(true);
-            Employee newEmp = dialog.getData();
-            
-            if(newEmp != null) {
-                DataManager.getInstance().addEmployee(newEmp);
-                refreshEmp.run();
-                refreshMonthlyTable();
-            }
-        });
-        
-        JButton delBtn = UIUtils.createButton("删除员工");
-        delBtn.addActionListener(e -> {
-            int row = table.getSelectedRow();
-            if (row >= 0) {
-                if(JOptionPane.showConfirmDialog(panel, "确定删除该员工吗？") == JOptionPane.YES_OPTION) {
-                    DataManager.getInstance().removeEmployee(row);
-                    refreshEmp.run();
-                    refreshMonthlyTable();
-                }
+            String fileName = docName + "_" + System.currentTimeMillis() + ".pdf";
+            document.save(fileName);
+            document.close();
+
+            if (Desktop.isDesktopSupported()) {
+                Desktop.getDesktop().open(new File(fileName));
             } else {
-                JOptionPane.showMessageDialog(panel, "请先选择一名员工");
+                JOptionPane.showMessageDialog(null, "PDF已生成: " + fileName);
             }
-        });
-        
-        btnPanel.add(addBtn);
-        btnPanel.add(delBtn);
-        
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
-        panel.add(btnPanel, BorderLayout.SOUTH);
-        return panel;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "PDF生成失败: " + e.getMessage());
+        }
+    }
+
+    private static PDFont loadChineseFont(PDDocument doc) {
+        String[] paths = {
+            "C:/Windows/Fonts/simhei.ttf", 
+            "C:/Windows/Fonts/msyh.ttf",
+            "/System/Library/Fonts/PingFang.ttc",
+            "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf"
+        };
+        for (String path : paths) {
+            if (new File(path).exists()) {
+                try { return PDType0Font.load(doc, new File(path)); } catch (IOException e) {}
+            }
+        }
+        return null;
     }
 }
-EOF
+3. 检查 SalesPanel.java 和 AttendancePanel.java
+您上传的 SalesPanel.java 中，createSalesRecordPanel 方法里的 buttonPanel 只添加了“添加”、“编辑”、“删除”按钮，没有添加“预览/打印”按钮，也没有调用 PdfUtils 的代码。
 
-echo "所有文件更新完成！现在员工信息已包含电话和身份证。"
+您需要修改 SalesPanel.java，在按钮面板中增加打印按钮：
+
+Java
+// 在 createSalesRecordPanel 方法的 buttonPanel 部分添加：
+
+JButton printButton = new JButton("预览单据"); // 新增按钮
+printButton.addActionListener(new ActionListener() {
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        int row = table.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(null, "请先选择一条记录");
+            return;
+        }
+        
+        // 获取选中行数据
+        String shipper = table.getValueAt(row, 1).toString();
+        String total = table.getValueAt(row, 6).toString();
+        String date = table.getValueAt(row, 7).toString();
+        
+        // 准备打印内容
+        java.util.Map<String, String> content = new java.util.LinkedHashMap<>();
+        content.put("客户名称:", shipper);
+        content.put("交易日期:", date);
+        content.put("合计金额:", "¥ " + total);
+        
+        // 调用工具类
+        PdfUtils.generateAndOpenPdf("Sales", "销售单据预览", content, "谢谢惠顾！");
+    }
+});
+
+// 别忘了把按钮加到面板上
+buttonPanel.add(printButton);
+请按照上述三点检查并手动修改您的代码，或者确认您是否在正确的目录下运行了之前的自动更新脚本。如果是在 IDE 中操作，修改 pom.xml 后记得刷新 Maven 项目。
