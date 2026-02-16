@@ -1,525 +1,185 @@
 #!/bin/bash
 
-# 1. 升级 UIUtils.java (增加年份生成方法)
-echo "正在升级 UIUtils.java (增加动态年份支持)..."
-cat > UIUtils.java <<EOF
+echo "正在升级 LoginFrame.java 以实现 PS 风格启动页效果..."
+
+cat > LoginFrame.java <<EOF
 package com.jinwanli;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.util.Calendar;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.net.URL;
+import javax.imageio.ImageIO;
+import java.io.IOException;
 
-public class UIUtils {
-    // 统一定义配色方案
-    public static final Color COLOR_PRIMARY = new Color(255, 215, 0); // 金色
-    public static final Color COLOR_BG_MAIN = new Color(255, 255, 255);
-    public static final Color COLOR_BG_TITLE = new Color(255, 248, 220);
-    public static final Color COLOR_BG_CONTROL = new Color(240, 240, 240);
+public class LoginFrame extends JFrame {
+    private JTextField usernameField;
+    private JPasswordField passwordField;
+    private JButton loginButton;
+    private Image splashImage;
     
-    // 统一定义字体
-    public static final Font FONT_TITLE = new Font("微软雅黑", Font.BOLD, 24);
-    public static final Font FONT_NORMAL = new Font("微软雅黑", Font.PLAIN, 14);
-    public static final Font FONT_TAB = new Font("微软雅黑", Font.PLAIN, 16);
+    // 使用 CardLayout 实现界面的切换
+    private CardLayout cardLayout;
+    private JPanel mainContainer;
 
-    /**
-     * 动态生成年份列表
-     * @return 返回当前年份的前2年到后2年 (共5年)
-     */
-    public static String[] getRecentYears() {
-        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
-        String[] years = new String[5];
-        for (int i = 0; i < 5; i++) {
-            // 生成范围：当前年份 - 2 到 当前年份 + 2
-            // 例如 2026年时，返回: 2024, 2025, 2026, 2027, 2028
-            years[i] = String.valueOf(currentYear - 2 + i);
+    public LoginFrame() {
+        setTitle("金万里企业管理 - 登录");
+        setSize(500, 380);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        
+        // 1. 加载启动图 (原背景图)
+        try {
+            URL imgUrl = getClass().getResource("/images/login_bg.jpg");
+            if (imgUrl != null) {
+                splashImage = ImageIO.read(imgUrl);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        return years;
-    }
 
-    /**
-     * 创建标准样式的表格
-     */
-    public static JScrollPane createStyledTable(Object[][] data, String[] columnNames) {
-        DefaultTableModel model = new DefaultTableModel(data, columnNames) {
+        // 2. 初始化主容器 (CardLayout)
+        cardLayout = new CardLayout();
+        mainContainer = new JPanel(cardLayout);
+        
+        // --- 界面 A: 启动画面 (Splash Screen) ---
+        JPanel splashPanel = new JPanel() {
             @Override
-            public boolean isCellEditable(int row, int column) {
-                return false; // 表格默认不可编辑
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (splashImage != null) {
+                    // 图片铺满全屏
+                    g.drawImage(splashImage, 0, 0, getWidth(), getHeight(), this);
+                } else {
+                    // 没图就显示个渐变色
+                    Graphics2D g2d = (Graphics2D) g;
+                    g2d.setPaint(new GradientPaint(0, 0, new Color(255, 215, 0), 0, getHeight(), Color.WHITE));
+                    g2d.fillRect(0, 0, getWidth(), getHeight());
+                    
+                    g.setColor(Color.BLACK);
+                    g.setFont(new Font("微软雅黑", Font.BOLD, 24));
+                    g.drawString("金万里企业管理系统", 140, 180);
+                }
             }
         };
-        JTable table = new JTable(model);
-        table.setFont(FONT_NORMAL);
-        table.setRowHeight(30);
-        table.getTableHeader().setFont(new Font("微软雅黑", Font.BOLD, 14));
-        table.getTableHeader().setBackground(COLOR_BG_CONTROL);
-        table.setSelectionBackground(COLOR_PRIMARY);
         
-        return new JScrollPane(table);
-    }
-
-    public static JButton createButton(String text) {
-        JButton btn = new JButton(text);
-        btn.setFont(FONT_NORMAL);
-        btn.setFocusPainted(false);
-        return btn;
-    }
-
-    public static JPanel createTitlePanel(String titleText) {
-        JLabel titleLabel = new JLabel(titleText);
-        titleLabel.setFont(FONT_TITLE);
-        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        // --- 界面 B: 登录表单 (干净背景) ---
+        JPanel loginPanel = createLoginPanel();
         
-        JPanel titlePanel = new JPanel();
-        titlePanel.setBackground(COLOR_BG_TITLE);
-        titlePanel.add(titleLabel);
-        return titlePanel;
+        // 将两个界面加入容器
+        mainContainer.add(splashPanel, "SPLASH");
+        mainContainer.add(loginPanel, "LOGIN");
+        
+        add(mainContainer);
+        
+        // 3. 设置定时器: 2秒后自动切换
+        Timer timer = new Timer(2000, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // 切换到登录界面
+                cardLayout.show(mainContainer, "LOGIN");
+                // 停止定时器，防止重复触发
+                ((Timer)e.getSource()).stop();
+            }
+        });
+        timer.setRepeats(false); // 只执行一次
+        timer.start();
+        
+        setVisible(true);
     }
-}
-EOF
-
-# 2. 更新 AttendancePanel.java (使用动态年份)
-echo "正在更新 AttendancePanel.java..."
-cat > AttendancePanel.java <<EOF
-package com.jinwanli;
-
-import com.jinwanli.model.AttendanceRecord;
-import com.jinwanli.model.Employee;
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.util.Calendar;
-import java.util.List;
-import java.util.stream.Collectors;
-
-public class AttendancePanel extends JPanel {
-    private JTabbedPane tabbedPane;
     
-    // Components for Monthly Detail
-    private JTable detailTable;
-    private DefaultTableModel detailModel;
-    private JComboBox<String> detailMonthBox;
-    private JComboBox<String> detailYearBox;
-
-    // Components for Monthly Stats
-    private JTable statsTable;
-    private DefaultTableModel statsModel;
-    private JComboBox<String> statsMonthBox;
-    private JComboBox<String> statsYearBox;
-
-    // Components for Employee Mgmt
-    private JTable empTable;
-    private DefaultTableModel empModel;
-
-    public AttendancePanel() {
-        setLayout(new BorderLayout());
-        setBackground(UIUtils.COLOR_BG_MAIN);
-        add(UIUtils.createTitlePanel("员工考勤管理"), BorderLayout.NORTH);
-        
-        tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(UIUtils.FONT_TAB);
-        
-        tabbedPane.addTab("月考勤表", createMonthlyDetailPanel());
-        tabbedPane.addTab("月统计", createMonthlyStatsPanel());
-        tabbedPane.addTab("员工管理", createEmployeePanel());
-        
-        add(tabbedPane, BorderLayout.CENTER);
-    }
-
-    // --- 1. 月考勤表 ---
-    private JPanel createMonthlyDetailPanel() {
+    private JPanel createLoginPanel() {
+        // 创建一个干净的登录界面，使用单一背景色，确保文字清晰
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(UIUtils.COLOR_BG_MAIN);
+        panel.setBackground(new Color(245, 245, 245)); // 浅灰色背景，护眼且清晰
+
+        // 顶部标题
+        JPanel titlePanel = new JPanel();
+        titlePanel.setBackground(new Color(255, 215, 0)); // 品牌金色
+        titlePanel.setPreferredSize(new Dimension(500, 80));
+        titlePanel.setLayout(new GridBagLayout());
         
-        JPanel queryPanel = new JPanel();
-        queryPanel.setBackground(UIUtils.COLOR_BG_CONTROL);
+        JLabel titleLabel = new JLabel("金万里企业管理系统");
+        titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 26));
+        titleLabel.setForeground(Color.BLACK); // 黑色文字
+        titlePanel.add(titleLabel);
         
-        queryPanel.add(new JLabel("年份:"));
-        // 优化点：使用动态年份
-        detailYearBox = new JComboBox<>(UIUtils.getRecentYears());
-        detailYearBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.YEAR))); // 默认选中今年
-        queryPanel.add(detailYearBox);
+        panel.add(titlePanel, BorderLayout.NORTH);
+
+        // 表单区域
+        JPanel formContainer = new JPanel(new GridBagLayout());
+        formContainer.setOpaque(false); // 透明，显示底部的浅灰背景
         
-        queryPanel.add(new JLabel("月份:"));
-        detailMonthBox = new JComboBox<>(new String[]{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"});
-        detailMonthBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.MONTH) + 1)); // 默认选中本月
-        queryPanel.add(detailMonthBox);
+        JPanel formBox = new JPanel();
+        formBox.setLayout(null);
+        formBox.setPreferredSize(new Dimension(320, 200));
+        formBox.setBackground(Color.WHITE); // 纯白色的表单区域
+        formBox.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200), 1)); // 细边框
         
-        JButton queryBtn = UIUtils.createButton("查询");
-        queryBtn.addActionListener(e -> refreshDetailTable());
-        queryPanel.add(queryBtn);
+        // 用户名
+        JLabel uLabel = new JLabel("用户名:");
+        uLabel.setBounds(40, 40, 60, 25);
+        uLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        formBox.add(uLabel);
         
-        JButton addRecordBtn = UIUtils.createButton("录入考勤");
-        addRecordBtn.addActionListener(e -> {
-            AttendanceDialog dialog = new AttendanceDialog((JFrame) SwingUtilities.getWindowAncestor(this));
-            dialog.setVisible(true);
-            AttendanceRecord record = dialog.getData();
-            if (record != null) {
-                DataManager.getInstance().addAttendanceRecord(record);
-                refreshDetailTable();
-                refreshStatsTable();
+        usernameField = new JTextField();
+        usernameField.setBounds(100, 40, 180, 25);
+        formBox.add(usernameField);
+        
+        // 密码
+        JLabel pLabel = new JLabel("密  码:");
+        pLabel.setBounds(40, 90, 60, 25);
+        pLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        formBox.add(pLabel);
+        
+        passwordField = new JPasswordField();
+        passwordField.setBounds(100, 90, 180, 25);
+        formBox.add(passwordField);
+        
+        // 登录按钮
+        loginButton = new JButton("立即登录");
+        loginButton.setBounds(40, 145, 240, 35);
+        loginButton.setBackground(new Color(255, 165, 0));
+        loginButton.setForeground(Color.WHITE);
+        loginButton.setFont(new Font("微软雅黑", Font.BOLD, 15));
+        loginButton.setFocusPainted(false);
+        
+        loginButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                doLogin();
             }
         });
-        queryPanel.add(addRecordBtn);
-
-        // 表格初始化
-        String[] columns = new String[33];
-        columns[0] = "员工姓名";
-        for(int i=1; i<=31; i++) columns[i] = String.valueOf(i);
-        columns[32] = "ID(隐藏)";
-
-        detailModel = new DefaultTableModel(columns, 0);
-        detailTable = new JTable(detailModel);
-        detailTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        detailTable.getColumnModel().getColumn(0).setPreferredWidth(100);
-        for(int i=1; i<=31; i++) detailTable.getColumnModel().getColumn(i).setPreferredWidth(40);
         
-        panel.add(queryPanel, BorderLayout.NORTH);
-        panel.add(new JScrollPane(detailTable), BorderLayout.CENTER);
+        formBox.add(loginButton);
+        formContainer.add(formBox);
         
-        refreshDetailTable();
+        panel.add(formContainer, BorderLayout.CENTER);
+        
+        // 底部版权 (可选)
+        JLabel footerLabel = new JLabel("© 2026 Jinwanli Enterprise Management");
+        footerLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        footerLabel.setFont(new Font("Arial", Font.PLAIN, 10));
+        footerLabel.setForeground(Color.GRAY);
+        footerLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        panel.add(footerLabel, BorderLayout.SOUTH);
+
         return panel;
     }
 
-    private void refreshDetailTable() {
-        detailModel.setRowCount(0);
-        String year = (String) detailYearBox.getSelectedItem();
-        String month = (String) detailMonthBox.getSelectedItem();
+    private void doLogin() {
+        String username = usernameField.getText();
+        String password = new String(passwordField.getPassword());
         
-        List<Employee> employees = DataManager.getInstance().getEmployees();
-        List<AttendanceRecord> records = DataManager.getInstance().getAttendanceByMonth(year, month);
-        
-        for (Employee emp : employees) {
-            Object[] row = new Object[33];
-            row[0] = emp.getName();
-            row[32] = emp.getId();
-            
-            List<AttendanceRecord> empRecords = records.stream()
-                .filter(r -> r.getEmployeeId().equals(emp.getId()))
-                .collect(Collectors.toList());
-            
-            for (AttendanceRecord r : empRecords) {
-                int day = r.getDay();
-                if (day >= 1 && day <= 31) {
-                    String symbol = "√";
-                    if(r.getStatus().equals("迟到")) symbol = "迟";
-                    else if(r.getStatus().equals("早退")) symbol = "退";
-                    else if(r.getStatus().equals("缺勤")) symbol = "X";
-                    row[day] = symbol;
-                }
-            }
-            detailModel.addRow(row);
-        }
-    }
-
-    // --- 2. 月统计 ---
-    private JPanel createMonthlyStatsPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(UIUtils.COLOR_BG_MAIN);
-        
-        JPanel queryPanel = new JPanel();
-        queryPanel.setBackground(UIUtils.COLOR_BG_CONTROL);
-        
-        queryPanel.add(new JLabel("年份:"));
-        // 优化点：使用动态年份
-        statsYearBox = new JComboBox<>(UIUtils.getRecentYears());
-        statsYearBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
-        queryPanel.add(statsYearBox);
-        
-        queryPanel.add(new JLabel("月份:"));
-        statsMonthBox = new JComboBox<>(new String[]{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"});
-        statsMonthBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.MONTH) + 1));
-        queryPanel.add(statsMonthBox);
-        
-        JButton queryBtn = UIUtils.createButton("计算统计");
-        queryBtn.addActionListener(e -> refreshStatsTable());
-        queryPanel.add(queryBtn);
-
-        String[] columns = {"工号", "姓名", "出勤天数", "迟到次数", "早退次数", "缺勤天数", "加班(小时)"};
-        statsModel = new DefaultTableModel(columns, 0);
-        statsTable = new JTable(statsModel);
-        statsTable.setRowHeight(30);
-        
-        panel.add(queryPanel, BorderLayout.NORTH);
-        panel.add(new JScrollPane(statsTable), BorderLayout.CENTER);
-        
-        refreshStatsTable();
-        return panel;
-    }
-
-    private void refreshStatsTable() {
-        statsModel.setRowCount(0);
-        String year = (String) statsYearBox.getSelectedItem();
-        String month = (String) statsMonthBox.getSelectedItem();
-        
-        List<Employee> employees = DataManager.getInstance().getEmployees();
-        List<AttendanceRecord> records = DataManager.getInstance().getAttendanceByMonth(year, month);
-        
-        for (Employee emp : employees) {
-            List<AttendanceRecord> empRecords = records.stream()
-                .filter(r -> r.getEmployeeId().equals(emp.getId()))
-                .collect(Collectors.toList());
-            
-            long presentDays = empRecords.stream().filter(r -> !r.getStatus().equals("缺勤")).count();
-            long lateCount = empRecords.stream().filter(r -> r.getStatus().equals("迟到")).count();
-            long earlyCount = empRecords.stream().filter(r -> r.getStatus().equals("早退")).count();
-            long absentCount = empRecords.stream().filter(r -> r.getStatus().equals("缺勤")).count();
-            double overtimeTotal = empRecords.stream().mapToDouble(AttendanceRecord::getOvertimeHours).sum();
-            
-            statsModel.addRow(new Object[]{
-                emp.getId(), emp.getName(), presentDays, lateCount, earlyCount, absentCount, overtimeTotal
-            });
-        }
-    }
-
-    // --- 3. 员工管理 ---
-    private JPanel createEmployeePanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(UIUtils.COLOR_BG_MAIN);
-        
-        String[] columnNames = {"工号", "姓名", "职位", "基本工资", "总工资", "状态"};
-        empModel = new DefaultTableModel(columnNames, 0);
-        empTable = new JTable(empModel);
-        empTable.setRowHeight(30);
-        empTable.getTableHeader().setBackground(UIUtils.COLOR_BG_CONTROL);
-
-        refreshEmpData();
-
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setBackground(UIUtils.COLOR_BG_CONTROL);
-        JButton addBtn = UIUtils.createButton("添加员工");
-        addBtn.addActionListener(e -> {
-            String name = JOptionPane.showInputDialog("请输入员工姓名:");
-            if (name != null && !name.trim().isEmpty()) {
-                Employee newEmp = new Employee("E" + System.currentTimeMillis()%1000, name, "员工", 5000, 0, 0);
-                DataManager.getInstance().addEmployee(newEmp);
-                refreshEmpData();
-                refreshDetailTable();
-                refreshStatsTable();
-            }
-        });
-        JButton delBtn = UIUtils.createButton("删除员工");
-        delBtn.addActionListener(e -> {
-            int row = empTable.getSelectedRow();
-            if (row >= 0) {
-                DataManager.getInstance().removeEmployee(row);
-                refreshEmpData();
-                refreshDetailTable();
-                refreshStatsTable();
-            }
-        });
-        buttonPanel.add(addBtn);
-        buttonPanel.add(delBtn);
-
-        panel.add(new JScrollPane(empTable), BorderLayout.CENTER);
-        panel.add(buttonPanel, BorderLayout.SOUTH);
-        return panel;
-    }
-
-    private void refreshEmpData() {
-        empModel.setRowCount(0);
-        List<Employee> list = DataManager.getInstance().getEmployees();
-        for (Employee e : list) {
-            empModel.addRow(new Object[]{e.getId(), e.getName(), e.getPosition(), e.getBaseSalary(), e.getTotalSalary(), e.getStatus()});
+        if (ConfigManager.validateLogin(username, password)) {
+            dispose();
+            new MainFrame();
+        } else {
+            JOptionPane.showMessageDialog(this, "用户名或密码错误", "登录失败", JOptionPane.ERROR_MESSAGE);
         }
     }
 }
 EOF
 
-# 3. 更新 SalesPanel.java (使用动态年份)
-echo "正在更新 SalesPanel.java..."
-cat > SalesPanel.java <<EOF
-package com.jinwanli;
-
-import com.jinwanli.model.SalesRecord;
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.util.Calendar;
-import java.util.List;
-
-public class SalesPanel extends JPanel {
-    private JTable table;
-    private DefaultTableModel model;
-    private JComboBox<String> yearBox;
-    private JComboBox<String> monthBox;
-
-    public SalesPanel() {
-        setLayout(new BorderLayout());
-        setBackground(UIUtils.COLOR_BG_MAIN);
-        add(UIUtils.createTitlePanel("销量统计管理"), BorderLayout.NORTH);
-
-        // 表格列定义
-        String[] columnNames = {"货主", "筐数", "每筐(斤)", "净重(斤)", "单价", "总金额", "日期"};
-        model = new DefaultTableModel(columnNames, 0) {
-            @Override public boolean isCellEditable(int row, int col) { return false; }
-        };
-        table = new JTable(model);
-        table.setRowHeight(30);
-        table.setFont(UIUtils.FONT_NORMAL);
-        table.getTableHeader().setFont(new Font("微软雅黑", Font.BOLD, 14));
-        table.getTableHeader().setBackground(UIUtils.COLOR_BG_CONTROL);
-        
-        // 查询栏
-        JPanel queryPanel = new JPanel();
-        queryPanel.setBackground(UIUtils.COLOR_BG_CONTROL);
-        
-        queryPanel.add(new JLabel("年份:"));
-        // 优化点：动态年份
-        yearBox = new JComboBox<>(UIUtils.getRecentYears());
-        yearBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
-        queryPanel.add(yearBox);
-        
-        queryPanel.add(new JLabel("月份:"));
-        monthBox = new JComboBox<>(new String[]{"全部", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"});
-        queryPanel.add(monthBox);
-        
-        JButton queryBtn = UIUtils.createButton("查询");
-        // 这里只是简单的刷新，实际项目可以根据 yearBox/monthBox 过滤 List<SalesRecord>
-        queryBtn.addActionListener(e -> refreshData()); 
-        queryPanel.add(queryBtn);
-
-        refreshData(); 
-
-        // 按钮面板
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setBackground(UIUtils.COLOR_BG_CONTROL);
-        
-        JButton addBtn = UIUtils.createButton("添加记录");
-        addBtn.addActionListener(e -> {
-            SalesDialog dialog = new SalesDialog((JFrame) SwingUtilities.getWindowAncestor(this));
-            dialog.setVisible(true);
-            SalesRecord record = dialog.getData();
-            if (record != null) {
-                DataManager.getInstance().addSalesRecord(record);
-                refreshData();
-            }
-        });
-
-        JButton delBtn = UIUtils.createButton("删除记录");
-        delBtn.addActionListener(e -> {
-            int row = table.getSelectedRow();
-            if (row >= 0) {
-                if(JOptionPane.showConfirmDialog(this, "确认删除？") == JOptionPane.YES_OPTION) {
-                    DataManager.getInstance().removeSalesRecord(row);
-                    refreshData();
-                }
-            } else {
-                JOptionPane.showMessageDialog(this, "请先选择一行");
-            }
-        });
-
-        buttonPanel.add(addBtn);
-        buttonPanel.add(delBtn);
-
-        add(queryPanel, BorderLayout.NORTH); // 添加查询栏
-        add(new JScrollPane(table), BorderLayout.CENTER);
-        add(buttonPanel, BorderLayout.SOUTH);
-    }
-
-    private void refreshData() {
-        model.setRowCount(0);
-        List<SalesRecord> list = DataManager.getInstance().getSalesRecords();
-        // 实际过滤逻辑应在此处实现，目前显示所有数据
-        for (SalesRecord r : list) {
-            model.addRow(new Object[]{
-                r.getShipperName(), r.getBasketCount(), r.getWeightPerBasket(),
-                r.getNetWeight(), r.getPricePerJin(), r.getTotalAmount(), r.getDate()
-            });
-        }
-    }
-}
-EOF
-
-# 4. 更新 ExpensePanel.java (使用动态年份)
-echo "正在更新 ExpensePanel.java..."
-cat > ExpensePanel.java <<EOF
-package com.jinwanli;
-
-import com.jinwanli.model.ExpenseRecord;
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.util.Calendar;
-import java.util.List;
-
-public class ExpensePanel extends JPanel {
-    private JTable table;
-    private DefaultTableModel model;
-    private JComboBox<String> yearBox;
-
-    public ExpensePanel() {
-        setLayout(new BorderLayout());
-        setBackground(UIUtils.COLOR_BG_MAIN);
-        add(UIUtils.createTitlePanel("开支管理"), BorderLayout.NORTH);
-
-        String[] columnNames = {"日期", "分类", "金额", "用途", "经手人"};
-        model = new DefaultTableModel(columnNames, 0) {
-            @Override public boolean isCellEditable(int row, int col) { return false; }
-        };
-        table = new JTable(model);
-        table.setRowHeight(30);
-        table.setFont(UIUtils.FONT_NORMAL);
-        table.getTableHeader().setBackground(UIUtils.COLOR_BG_CONTROL);
-
-        // 查询栏
-        JPanel queryPanel = new JPanel();
-        queryPanel.setBackground(UIUtils.COLOR_BG_CONTROL);
-        
-        queryPanel.add(new JLabel("年份:"));
-        // 优化点：动态年份
-        yearBox = new JComboBox<>(UIUtils.getRecentYears());
-        yearBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
-        queryPanel.add(yearBox);
-        
-        JButton queryBtn = UIUtils.createButton("查询");
-        queryBtn.addActionListener(e -> refreshData());
-        queryPanel.add(queryBtn);
-
-        refreshData();
-
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setBackground(UIUtils.COLOR_BG_CONTROL);
-        
-        JButton addBtn = UIUtils.createButton("添加支出");
-        addBtn.addActionListener(e -> {
-            ExpenseDialog dialog = new ExpenseDialog((JFrame) SwingUtilities.getWindowAncestor(this));
-            dialog.setVisible(true);
-            ExpenseRecord record = dialog.getData();
-            if (record != null) {
-                DataManager.getInstance().addExpenseRecord(record);
-                refreshData();
-            }
-        });
-
-        JButton delBtn = UIUtils.createButton("删除支出");
-        delBtn.addActionListener(e -> {
-            int row = table.getSelectedRow();
-            if (row >= 0) {
-                if(JOptionPane.showConfirmDialog(this, "确认删除？") == JOptionPane.YES_OPTION) {
-                    DataManager.getInstance().removeExpenseRecord(row);
-                    refreshData();
-                }
-            } else {
-                JOptionPane.showMessageDialog(this, "请先选择一行");
-            }
-        });
-
-        buttonPanel.add(addBtn);
-        buttonPanel.add(delBtn);
-
-        add(queryPanel, BorderLayout.NORTH); // 添加查询栏
-        add(new JScrollPane(table), BorderLayout.CENTER);
-        add(buttonPanel, BorderLayout.SOUTH);
-    }
-
-    private void refreshData() {
-        model.setRowCount(0);
-        List<ExpenseRecord> list = DataManager.getInstance().getExpenseRecords();
-        for (ExpenseRecord r : list) {
-            model.addRow(new Object[]{r.getDate(), r.getCategory(), r.getAmount(), r.getUsage(), r.getHandler()});
-        }
-    }
-}
-EOF
-
-echo "年份优化完成！请重启应用查看效果。"
+echo "LoginFrame.java 升级完成！启动时将展示2秒背景图。"
