@@ -8,15 +8,19 @@ public class Employee implements Serializable {
     private String id;
     private String name;
     private String position;
+    private String phone;
+    private String idCard;
     private double baseSalary;
     private double performanceSalary;
     private double overtimeSalary;
     private String status;
 
-    public Employee(String id, String name, String position, double baseSalary, double performanceSalary, double overtimeSalary) {
+    public Employee(String id, String name, String position, String phone, String idCard, double baseSalary, double performanceSalary, double overtimeSalary) {
         this.id = id;
         this.name = name;
         this.position = position;
+        this.phone = phone;
+        this.idCard = idCard;
         this.baseSalary = baseSalary;
         this.performanceSalary = performanceSalary;
         this.overtimeSalary = overtimeSalary;
@@ -30,6 +34,8 @@ public class Employee implements Serializable {
     public String getId() { return id; }
     public String getName() { return name; }
     public String getPosition() { return position; }
+    public String getPhone() { return phone; }
+    public String getIdCard() { return idCard; }
     public double getBaseSalary() { return baseSalary; }
     public double getPerformanceSalary() { return performanceSalary; }
     public double getOvertimeSalary() { return overtimeSalary; }

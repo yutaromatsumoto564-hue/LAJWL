@@ -29,4 +29,10 @@ public class AttendanceRecord implements Serializable {
             return Integer.parseInt(date.substring(date.lastIndexOf("-") + 1));
         } catch (Exception e) { return 0; }
     }
+    
+    public int getDayOfMonth() {
+        try {
+            return Integer.parseInt(date.split("-")[2]);
+        } catch (Exception e) { return 0; }
+    }
 }

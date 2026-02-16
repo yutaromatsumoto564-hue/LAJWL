@@ -29,6 +29,7 @@ public class MainFrame extends JFrame {
 
         // 添加各个功能面板
         contentPanel.add(createHomePanel(), "HOME");
+        contentPanel.add(new SummaryPanel(), "SUMMARY");
         contentPanel.add(new AttendancePanel(), "ATTENDANCE");
         contentPanel.add(new SalesPanel(), "SALES");
         contentPanel.add(new ExpensePanel(), "EXPENSE");
@@ -65,6 +66,8 @@ public class MainFrame extends JFrame {
         navPanel.setLayout(new BoxLayout(navPanel, BoxLayout.Y_AXIS));
 
         navPanel.add(Box.createVerticalStrut(20));
+        navPanel.add(createNavButton("经营概览", "SUMMARY"));
+        navPanel.add(Box.createVerticalStrut(10));
         navPanel.add(createNavButton("员工考勤", "ATTENDANCE"));
         navPanel.add(Box.createVerticalStrut(10));
         navPanel.add(createNavButton("销量统计", "SALES"));

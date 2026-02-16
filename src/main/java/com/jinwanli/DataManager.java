@@ -25,8 +25,8 @@ public class DataManager {
         attendanceRecords = loadList("attendance.dat");
 
         if (employees.isEmpty()) {
-            employees.add(new Employee("001", "张三", "经理", 8000, 2000, 500));
-            employees.add(new Employee("002", "李四", "员工", 5000, 1000, 200));
+            employees.add(new Employee("001", "张三", "经理", "13800138000", "110101199001011234", 8000, 2000, 500));
+            employees.add(new Employee("002", "李四", "员工", "13900139000", "110101199202025678", 5000, 1000, 200));
             saveEmployees();
         }
     }

@@ -6,24 +6,18 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.Calendar;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class AttendancePanel extends JPanel {
     private JTabbedPane tabbedPane;
     
-    private JTable detailTable;
-    private DefaultTableModel detailModel;
-    private JComboBox<String> detailMonthBox;
-    private JComboBox<String> detailYearBox;
-
-    private JTable statsTable;
-    private DefaultTableModel statsModel;
-    private JComboBox<String> statsMonthBox;
-    private JComboBox<String> statsYearBox;
-
-    private JTable empTable;
-    private DefaultTableModel empModel;
+    private JTable monthlyTable;
+    private DefaultTableModel monthlyModel;
+    private JComboBox<String> yearBox;
+    private JComboBox<String> monthBox;
 
     public AttendancePanel() {
         setLayout(new BorderLayout());
@@ -33,202 +27,211 @@ public class AttendancePanel extends JPanel {
         tabbedPane = new JTabbedPane();
         tabbedPane.setFont(UIUtils.FONT_TAB);
         
-        tabbedPane.addTab("月考勤表", createMonthlyDetailPanel());
-        tabbedPane.addTab("月统计", createMonthlyStatsPanel());
-        tabbedPane.addTab("员工管理", createEmployeePanel());
+        tabbedPane.addTab("月考勤表", createMonthlyView());
+        tabbedPane.addTab("员工档案管理", createEmployeeView());
         
         add(tabbedPane, BorderLayout.CENTER);
     }
 
-    private JPanel createMonthlyDetailPanel() {
+    private JPanel createMonthlyView() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(UIUtils.COLOR_BG_MAIN);
         
-        JPanel queryPanel = new JPanel();
+        JPanel queryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         queryPanel.setBackground(UIUtils.COLOR_BG_CONTROL);
         
         queryPanel.add(new JLabel("年份:"));
-        detailYearBox = new JComboBox<>(UIUtils.getRecentYears());
-        detailYearBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
-        queryPanel.add(detailYearBox);
+        yearBox = new JComboBox<>(UIUtils.getRecentYears());
+        yearBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
+        queryPanel.add(yearBox);
         
         queryPanel.add(new JLabel("月份:"));
-        detailMonthBox = new JComboBox<>(new String[]{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"});
-        detailMonthBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.MONTH) + 1));
-        queryPanel.add(detailMonthBox);
+        monthBox = new JComboBox<>(new String[]{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"});
+        monthBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.MONTH) + 1));
+        queryPanel.add(monthBox);
         
-        JButton queryBtn = UIUtils.createButton("查询");
-        queryBtn.addActionListener(e -> refreshDetailTable());
+        JButton queryBtn = UIUtils.createButton("查询/刷新");
+        queryBtn.addActionListener(e -> refreshMonthlyTable());
         queryPanel.add(queryBtn);
         
-        JButton addRecordBtn = UIUtils.createButton("录入考勤");
-        addRecordBtn.addActionListener(e -> {
+        JButton addBtn = UIUtils.createButton("录入考勤");
+        addBtn.addActionListener(e -> {
             AttendanceDialog dialog = new AttendanceDialog((JFrame) SwingUtilities.getWindowAncestor(this));
             dialog.setVisible(true);
             AttendanceRecord record = dialog.getData();
             if (record != null) {
                 DataManager.getInstance().addAttendanceRecord(record);
-                refreshDetailTable();
-                refreshStatsTable();
+                refreshMonthlyTable();
             }
         });
-        queryPanel.add(addRecordBtn);
-
-        String[] columns = new String[33];
-        columns[0] = "员工姓名";
-        for(int i=1; i<=31; i++) columns[i] = String.valueOf(i);
-        columns[32] = "ID(隐藏)";
-
-        detailModel = new DefaultTableModel(columns, 0);
-        detailTable = new JTable(detailModel);
-        detailTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        detailTable.getColumnModel().getColumn(0).setPreferredWidth(100);
-        for(int i=1; i<=31; i++) detailTable.getColumnModel().getColumn(i).setPreferredWidth(40);
+        queryPanel.add(addBtn);
         
         panel.add(queryPanel, BorderLayout.NORTH);
-        panel.add(new JScrollPane(detailTable), BorderLayout.CENTER);
         
-        refreshDetailTable();
+        String[] columnNames = new String[33];
+        columnNames[0] = "姓名";
+        for (int i = 1; i <= 31; i++) {
+            columnNames[i] = i + "日";
+        }
+        columnNames[32] = "ID";
+
+        monthlyModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) { return false; }
+        };
+        
+        monthlyTable = new JTable(monthlyModel);
+        monthlyTable.setRowHeight(30);
+        monthlyTable.setFont(UIUtils.FONT_NORMAL);
+        monthlyTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        
+        monthlyTable.getColumnModel().getColumn(0).setPreferredWidth(80);
+        for (int i = 1; i <= 31; i++) {
+            monthlyTable.getColumnModel().getColumn(i).setPreferredWidth(40);
+        }
+        
+        panel.add(new JScrollPane(monthlyTable), BorderLayout.CENTER);
+        
+        refreshMonthlyTable();
+        
         return panel;
     }
 
-    private void refreshDetailTable() {
-        detailModel.setRowCount(0);
-        String year = (String) detailYearBox.getSelectedItem();
-        String month = (String) detailMonthBox.getSelectedItem();
+    private void refreshMonthlyTable() {
+        monthlyModel.setRowCount(0);
+        
+        String year = (String) yearBox.getSelectedItem();
+        String month = (String) monthBox.getSelectedItem();
         
         List<Employee> employees = DataManager.getInstance().getEmployees();
-        List<AttendanceRecord> records = DataManager.getInstance().getAttendanceByMonth(year, month);
+        List<AttendanceRecord> monthRecords = DataManager.getInstance().getAttendanceByMonth(year, month);
         
         for (Employee emp : employees) {
-            Object[] row = new Object[33];
-            row[0] = emp.getName();
-            row[32] = emp.getId();
+            Object[] rowData = new Object[33];
+            rowData[0] = emp.getName();
+            rowData[32] = emp.getId();
             
-            List<AttendanceRecord> empRecords = records.stream()
-                .filter(r -> r.getEmployeeId().equals(emp.getId()))
-                .collect(Collectors.toList());
+            List<AttendanceRecord> myRecords = monthRecords.stream()
+                    .filter(r -> r.getEmployeeId().equals(emp.getId()))
+                    .collect(Collectors.toList());
             
-            for (AttendanceRecord r : empRecords) {
-                int day = r.getDay();
+            for (AttendanceRecord r : myRecords) {
+                int day = r.getDayOfMonth();
                 if (day >= 1 && day <= 31) {
                     String symbol = "√";
-                    if(r.getStatus().equals("迟到")) symbol = "迟";
-                    else if(r.getStatus().equals("早退")) symbol = "退";
-                    else if(r.getStatus().equals("缺勤")) symbol = "X";
-                    row[day] = symbol;
+                    if ("迟到".equals(r.getStatus())) symbol = "L";
+                    else if ("早退".equals(r.getStatus())) symbol = "E";
+                    else if ("缺勤".equals(r.getStatus())) symbol = "X";
+                    else if ("正常".equals(r.getStatus())) symbol = "√";
+                    
+                    if (r.getOvertimeHours() > 0) {
+                        symbol += "(+" + (int)r.getOvertimeHours() + ")";
+                    }
+                    
+                    rowData[day] = symbol;
                 }
             }
-            detailModel.addRow(row);
+            
+            monthlyModel.addRow(rowData);
         }
+        
+        System.out.println("已刷新 " + year + "年" + month + "月 的考勤数据");
     }
 
-    private JPanel createMonthlyStatsPanel() {
+    private JPanel createEmployeeView() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(UIUtils.COLOR_BG_MAIN);
         
-        JPanel queryPanel = new JPanel();
-        queryPanel.setBackground(UIUtils.COLOR_BG_CONTROL);
+        String[] cols = {"工号", "姓名", "职位", "联系电话", "身份证号", "基本工资(元)"};
+        DefaultTableModel model = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int row, int col) { return false; }
+        };
+        JTable table = new JTable(model);
+        table.setRowHeight(30);
+        table.setFont(UIUtils.FONT_NORMAL);
+        table.getTableHeader().setBackground(UIUtils.COLOR_BG_CONTROL);
         
-        queryPanel.add(new JLabel("年份:"));
-        statsYearBox = new JComboBox<>(UIUtils.getRecentYears());
-        statsYearBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
-        queryPanel.add(statsYearBox);
+        Runnable refreshEmp = () -> {
+            model.setRowCount(0);
+            for(Employee e : DataManager.getInstance().getEmployees()) {
+                model.addRow(new Object[]{
+                    e.getId(), 
+                    e.getName(), 
+                    e.getPosition(), 
+                    e.getPhone(),
+                    e.getIdCard(),
+                    e.getBaseSalary()
+                });
+            }
+        };
+        refreshEmp.run();
         
-        queryPanel.add(new JLabel("月份:"));
-        statsMonthBox = new JComboBox<>(new String[]{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"});
-        statsMonthBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.MONTH) + 1));
-        queryPanel.add(statsMonthBox);
+        JPanel btnPanel = new JPanel();
+        btnPanel.setBackground(UIUtils.COLOR_BG_CONTROL);
         
-        JButton queryBtn = UIUtils.createButton("计算统计");
-        queryBtn.addActionListener(e -> refreshStatsTable());
-        queryPanel.add(queryBtn);
-
-        String[] columns = {"工号", "姓名", "出勤天数", "迟到次数", "早退次数", "缺勤天数", "加班(小时)"};
-        statsModel = new DefaultTableModel(columns, 0);
-        statsTable = new JTable(statsModel);
-        statsTable.setRowHeight(30);
-        
-        panel.add(queryPanel, BorderLayout.NORTH);
-        panel.add(new JScrollPane(statsTable), BorderLayout.CENTER);
-        
-        refreshStatsTable();
-        return panel;
-    }
-
-    private void refreshStatsTable() {
-        statsModel.setRowCount(0);
-        String year = (String) statsYearBox.getSelectedItem();
-        String month = (String) statsMonthBox.getSelectedItem();
-        
-        List<Employee> employees = DataManager.getInstance().getEmployees();
-        List<AttendanceRecord> records = DataManager.getInstance().getAttendanceByMonth(year, month);
-        
-        for (Employee emp : employees) {
-            List<AttendanceRecord> empRecords = records.stream()
-                .filter(r -> r.getEmployeeId().equals(emp.getId()))
-                .collect(Collectors.toList());
-            
-            long presentDays = empRecords.stream().filter(r -> !r.getStatus().equals("缺勤")).count();
-            long lateCount = empRecords.stream().filter(r -> r.getStatus().equals("迟到")).count();
-            long earlyCount = empRecords.stream().filter(r -> r.getStatus().equals("早退")).count();
-            long absentCount = empRecords.stream().filter(r -> r.getStatus().equals("缺勤")).count();
-            double overtimeTotal = empRecords.stream().mapToDouble(AttendanceRecord::getOvertimeHours).sum();
-            
-            statsModel.addRow(new Object[]{
-                emp.getId(), emp.getName(), presentDays, lateCount, earlyCount, absentCount, overtimeTotal
-            });
-        }
-    }
-
-    private JPanel createEmployeePanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(UIUtils.COLOR_BG_MAIN);
-        
-        String[] columnNames = {"工号", "姓名", "职位", "基本工资", "总工资", "状态"};
-        empModel = new DefaultTableModel(columnNames, 0);
-        empTable = new JTable(empModel);
-        empTable.setRowHeight(30);
-        empTable.getTableHeader().setBackground(UIUtils.COLOR_BG_CONTROL);
-
-        refreshEmpData();
-
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setBackground(UIUtils.COLOR_BG_CONTROL);
-        JButton addBtn = UIUtils.createButton("添加员工");
+        JButton addBtn = new JButton("添加员工");
         addBtn.addActionListener(e -> {
-            String name = JOptionPane.showInputDialog("请输入员工姓名:");
-            if (name != null && !name.trim().isEmpty()) {
-                Employee newEmp = new Employee("E" + System.currentTimeMillis()%1000, name, "员工", 5000, 0, 0);
+            EmployeeDialog dialog = new EmployeeDialog((JFrame) SwingUtilities.getWindowAncestor(this));
+            dialog.setVisible(true);
+            Employee newEmp = dialog.getData();
+            
+            if(newEmp != null) {
                 DataManager.getInstance().addEmployee(newEmp);
-                refreshEmpData();
-                refreshDetailTable();
-                refreshStatsTable();
+                refreshEmp.run();
+                refreshMonthlyTable();
             }
         });
-        JButton delBtn = UIUtils.createButton("删除员工");
+        
+        JButton delBtn = new JButton("删除员工");
         delBtn.addActionListener(e -> {
-            int row = empTable.getSelectedRow();
+            int row = table.getSelectedRow();
             if (row >= 0) {
-                DataManager.getInstance().removeEmployee(row);
-                refreshEmpData();
-                refreshDetailTable();
-                refreshStatsTable();
+                if(JOptionPane.showConfirmDialog(panel, "确定删除该员工吗？") == JOptionPane.YES_OPTION) {
+                    DataManager.getInstance().removeEmployee(row);
+                    refreshEmp.run();
+                    refreshMonthlyTable();
+                }
+            } else {
+                JOptionPane.showMessageDialog(panel, "请先选择一名员工");
             }
         });
-        buttonPanel.add(addBtn);
-        buttonPanel.add(delBtn);
-
-        panel.add(new JScrollPane(empTable), BorderLayout.CENTER);
-        panel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        JButton printBtn = new JButton("打印/预览工资单");
+        printBtn.setForeground(new Color(0, 102, 204));
+        printBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0) {
+                String id = (String) table.getValueAt(row, 0);
+                Employee emp = DataManager.getInstance().getEmployeeById(id);
+                if(emp != null) printPayslip(emp);
+            } else {
+                JOptionPane.showMessageDialog(panel, "请先选择一名员工");
+            }
+        });
+        
+        btnPanel.add(addBtn);
+        btnPanel.add(delBtn);
+        btnPanel.add(printBtn);
+        
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        panel.add(btnPanel, BorderLayout.SOUTH);
         return panel;
     }
+    
+    private void printPayslip(Employee e) {
+        Map<String, String> content = new LinkedHashMap<>();
+        content.put("员工姓名:", e.getName());
+        content.put("员工职位:", e.getPosition());
+        content.put("工号:", e.getId());
+        content.put("----------------", "--------------------");
+        content.put("基本工资:", String.format("%.2f", e.getBaseSalary()));
+        content.put("绩效奖金:", String.format("%.2f", e.getPerformanceSalary()));
+        content.put("加班补贴:", String.format("%.2f", e.getOvertimeSalary()));
+        content.put("扣除项:", "0.00");
+        content.put("----------------", "--------------------");
+        content.put("实发工资:", String.format("¥ %.2f", e.getTotalSalary()));
 
-    private void refreshEmpData() {
-        empModel.setRowCount(0);
-        List<Employee> list = DataManager.getInstance().getEmployees();
-        for (Employee e : list) {
-            empModel.addRow(new Object[]{e.getId(), e.getName(), e.getPosition(), e.getBaseSalary(), e.getTotalSalary(), e.getStatus()});
-        }
+        String footer = "金万里企业管理系统 - 薪资凭证\n请核对无误后签字确认。\n签字：__________";
+        PdfUtils.generateAndOpenPdf("工资单-" + e.getName(), "员工薪资单", content, footer);
     }
 }

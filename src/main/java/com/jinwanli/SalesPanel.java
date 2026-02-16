@@ -5,7 +5,9 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.Calendar;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SalesPanel extends JPanel {
     private JTable table;
@@ -72,9 +74,14 @@ public class SalesPanel extends JPanel {
                 JOptionPane.showMessageDialog(this, "请先选择一行");
             }
         });
+        
+        JButton printBtn = UIUtils.createButton("打印/预览单据");
+        printBtn.setForeground(new Color(0, 102, 204));
+        printBtn.addActionListener(e -> previewSelectedRecord());
 
         buttonPanel.add(addBtn);
         buttonPanel.add(delBtn);
+        buttonPanel.add(printBtn);
 
         add(queryPanel, BorderLayout.NORTH);
         add(new JScrollPane(table), BorderLayout.CENTER);
@@ -90,5 +97,36 @@ public class SalesPanel extends JPanel {
                 r.getNetWeight(), r.getPricePerJin(), r.getTotalAmount(), r.getDate()
             });
         }
+    }
+
+    private void previewSelectedRecord() {
+        int row = table.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "请先选择一条销售记录进行打印！");
+            return;
+        }
+
+        String shipper = table.getValueAt(row, 0).toString();
+        String baskets = table.getValueAt(row, 1).toString();
+        String weightPer = table.getValueAt(row, 2).toString();
+        String netWeight = table.getValueAt(row, 3).toString();
+        String price = table.getValueAt(row, 4).toString();
+        String total = table.getValueAt(row, 5).toString();
+        String date = table.getValueAt(row, 6).toString();
+
+        Map<String, String> content = new LinkedHashMap<>();
+        content.put("客户名称:", shipper);
+        content.put("交易日期:", date);
+        content.put("----------------", "--------------------");
+        content.put("商品筐数:", baskets + " 筐");
+        content.put("单筐重量:", weightPer + " 斤");
+        content.put("商品净重:", netWeight + " 斤");
+        content.put("销售单价:", price + " 元/斤");
+        content.put("----------------", "--------------------");
+        content.put("合计金额:", "¥ " + total);
+
+        String footer = "金万里企业管理系统\n联系电话: 138-xxxx-xxxx\n谢谢惠顾！";
+
+        PdfUtils.generateAndOpenPdf("Sales_" + date, "金万里 - 销售出货单", content, footer);
     }
 }
