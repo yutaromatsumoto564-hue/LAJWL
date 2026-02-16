@@ -115,6 +115,7 @@ public class PdfUtils {
                 try {
                     return PDType0Font.load(doc, file);
                 } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }
