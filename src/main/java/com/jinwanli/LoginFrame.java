@@ -12,47 +12,25 @@ public class LoginFrame extends JFrame {
     private JTextField usernameField;
     private JPasswordField passwordField;
     private JButton loginButton;
-    private Image splashImage;
     
     private CardLayout cardLayout;
     private JPanel mainContainer;
+    private Timer timer;
 
     public LoginFrame() {
         setTitle("金万里企业管理 - 登录");
-        setSize(500, 380);
+        setSize(450, 550);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        
-        try {
-            URL imgUrl = getClass().getResource("/images/login_bg.jpg");
-            if (imgUrl != null) {
-                splashImage = ImageIO.read(imgUrl);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        setResizable(false);
 
         cardLayout = new CardLayout();
         mainContainer = new JPanel(cardLayout);
         
-        JPanel splashPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                if (splashImage != null) {
-                    g.drawImage(splashImage, 0, 0, getWidth(), getHeight(), this);
-                } else {
-                    Graphics2D g2d = (Graphics2D) g;
-                    g2d.setPaint(new GradientPaint(0, 0, new Color(255, 215, 0), 0, getHeight(), Color.WHITE));
-                    g2d.fillRect(0, 0, getWidth(), getHeight());
-                    
-                    g.setColor(Color.BLACK);
-                    g.setFont(new Font("微软雅黑", Font.BOLD, 24));
-                    g.drawString("金万里企业管理系统", 140, 180);
-                }
-            }
-        };
+        // 开场动画面板
+        JPanel splashPanel = createSplashPanel();
         
+        // 登录面板
         JPanel loginPanel = createLoginPanel();
         
         mainContainer.add(splashPanel, "SPLASH");
@@ -60,11 +38,12 @@ public class LoginFrame extends JFrame {
         
         add(mainContainer);
         
-        Timer timer = new Timer(2000, new ActionListener() {
+        // 2秒后切换到登录
+        timer = new Timer(2000, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 cardLayout.show(mainContainer, "LOGIN");
-                ((Timer)e.getSource()).stop();
+                timer.stop();
             }
         });
         timer.setRepeats(false);
@@ -73,55 +52,144 @@ public class LoginFrame extends JFrame {
         setVisible(true);
     }
     
+    private JPanel createSplashPanel() {
+        JPanel panel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // 渐变背景
+                GradientPaint gradient = new GradientPaint(0, 0, new Color(37, 99, 235), 0, getHeight(), new Color(147, 197, 253));
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                
+                // 装饰圆
+                g2d.setColor(new Color(255, 255, 255, 30));
+                g2d.fillOval(-50, -50, 200, 200);
+                g2d.fillOval(getWidth() - 150, getHeight() - 200, 250, 250);
+                g2d.fillOval(getWidth() - 100, -30, 120, 120);
+                
+                // Logo
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(new Font("Arial", Font.BOLD, 60));
+                g2d.drawString("💼", getWidth()/2 - 40, getHeight()/2 - 40);
+                
+                g2d.setFont(new Font("Microsoft YaHei", Font.BOLD, 32));
+                String title = "金万里";
+                FontMetrics fm = g2d.getFontMetrics();
+                g2d.drawString(title, (getWidth() - fm.stringWidth(title)) / 2, getHeight()/2 + 30);
+                
+                g2d.setFont(new Font("Microsoft YaHei", Font.PLAIN, 16));
+                g2d.setColor(new Color(255, 255, 255, 200));
+                String subtitle = "企业管理系统";
+                fm = g2d.getFontMetrics();
+                g2d.drawString(subtitle, (getWidth() - fm.stringWidth(subtitle)) / 2, getHeight()/2 + 60);
+                
+                // 加载提示
+                g2d.setFont(new Font("Microsoft YaHei", Font.PLAIN, 12));
+                g2d.setColor(new Color(255, 255, 255, 150));
+                String loading = "正在加载...";
+                fm = g2d.getFontMetrics();
+                g2d.drawString(loading, (getWidth() - fm.stringWidth(loading)) / 2, getHeight() - 50);
+            }
+        };
+        
+        panel.setPreferredSize(new Dimension(450, 550));
+        return panel;
+    }
+    
     private JPanel createLoginPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(new Color(245, 245, 245));
+        panel.setBackground(UIUtils.COLOR_BG_MAIN);
 
-        JPanel titlePanel = new JPanel();
-        titlePanel.setBackground(new Color(255, 215, 0));
-        titlePanel.setPreferredSize(new Dimension(500, 80));
-        titlePanel.setLayout(new GridBagLayout());
+        // 顶部装饰
+        JPanel topPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                GradientPaint gradient = new GradientPaint(0, 0, UIUtils.COLOR_PRIMARY, 0, 180, UIUtils.COLOR_PRIMARY_HOVER);
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                
+                // 装饰
+                g2d.setColor(new Color(255, 255, 255, 20));
+                g2d.fillOval(0, -50, 200, 200);
+                g2d.fillOval(getWidth() - 150, 50, 180, 180);
+                
+                // 标题
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(UIUtils.FONT_TITLE);
+                String title = "欢迎登录";
+                FontMetrics fm = g2d.getFontMetrics();
+                g2d.drawString(title, (getWidth() - fm.stringWidth(title)) / 2, 100);
+                
+                g2d.setFont(UIUtils.FONT_BODY);
+                g2d.setColor(new Color(255, 255, 255, 200));
+                String subtitle = "金万里企业管理系统";
+                fm = g2d.getFontMetrics();
+                g2d.drawString(subtitle, (getWidth() - fm.stringWidth(subtitle)) / 2, 130);
+            }
+        };
+        topPanel.setPreferredSize(new Dimension(450, 180));
         
-        JLabel titleLabel = new JLabel("金万里企业管理系统");
-        titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 26));
-        titleLabel.setForeground(Color.BLACK);
-        titlePanel.add(titleLabel);
-        
-        panel.add(titlePanel, BorderLayout.NORTH);
+        panel.add(topPanel, BorderLayout.NORTH);
 
-        JPanel formContainer = new JPanel(new GridBagLayout());
-        formContainer.setOpaque(false);
+        // 登录表单
+        JPanel formPanel = new JPanel();
+        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
+        formPanel.setBackground(UIUtils.COLOR_BG_MAIN);
+        formPanel.setBorder(BorderFactory.createEmptyBorder(40, 50, 40, 50));
         
-        JPanel formBox = new JPanel();
-        formBox.setLayout(null);
-        formBox.setPreferredSize(new Dimension(320, 200));
-        formBox.setBackground(Color.WHITE);
-        formBox.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200), 1));
+        // 用户名
+        JPanel userPanel = new JPanel(new BorderLayout(10, 0));
+        userPanel.setOpaque(false);
+        userPanel.setMaximumSize(new Dimension(350, 50));
         
-        JLabel uLabel = new JLabel("用户名:");
-        uLabel.setBounds(40, 40, 60, 25);
-        uLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        formBox.add(uLabel);
+        JLabel userIcon = new JLabel("👤");
+        userIcon.setFont(new Font("Arial", Font.PLAIN, 16));
+        userIcon.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10));
         
-        usernameField = new JTextField();
-        usernameField.setBounds(100, 40, 180, 25);
-        formBox.add(usernameField);
+        usernameField = UIUtils.createTextField();
+        usernameField.setPreferredSize(new Dimension(300, 44));
+        usernameField.setFont(UIUtils.FONT_BODY);
+        usernameField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(UIUtils.COLOR_BORDER),
+            BorderFactory.createEmptyBorder(12, 15, 12, 15)
+        ));
         
-        JLabel pLabel = new JLabel("密  码:");
-        pLabel.setBounds(40, 90, 60, 25);
-        pLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        formBox.add(pLabel);
+        userPanel.add(userIcon, BorderLayout.WEST);
+        userPanel.add(usernameField, BorderLayout.CENTER);
+        
+        // 密码
+        JPanel pwdPanel = new JPanel(new BorderLayout(10, 0));
+        pwdPanel.setOpaque(false);
+        pwdPanel.setMaximumSize(new Dimension(350, 50));
+        pwdPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 0, 0));
+        
+        JLabel pwdIcon = new JLabel("🔒");
+        pwdIcon.setFont(new Font("Arial", Font.PLAIN, 16));
+        pwdIcon.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10));
         
         passwordField = new JPasswordField();
-        passwordField.setBounds(100, 90, 180, 25);
-        formBox.add(passwordField);
+        passwordField.setFont(UIUtils.FONT_BODY);
+        passwordField.setPreferredSize(new Dimension(300, 44));
+        passwordField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(UIUtils.COLOR_BORDER),
+            BorderFactory.createEmptyBorder(12, 15, 12, 15)
+        ));
         
-        loginButton = new JButton("立即登录");
-        loginButton.setBounds(40, 145, 240, 35);
-        loginButton.setBackground(new Color(255, 165, 0));
-        loginButton.setForeground(Color.WHITE);
-        loginButton.setFont(new Font("微软雅黑", Font.BOLD, 15));
-        loginButton.setFocusPainted(false);
+        pwdPanel.add(pwdIcon, BorderLayout.WEST);
+        pwdPanel.add(passwordField, BorderLayout.CENTER);
+        
+        // 登录按钮
+        loginButton = UIUtils.createButton("登 录");
+        loginButton.setMaximumSize(new Dimension(350, 48));
+        loginButton.setFont(UIUtils.FONT_BODY_BOLD);
+        loginButton.setBorder(BorderFactory.createEmptyBorder(12, 0, 12, 0));
         
         loginButton.addActionListener(new ActionListener() {
             @Override
@@ -130,30 +198,51 @@ public class LoginFrame extends JFrame {
             }
         });
         
-        formBox.add(loginButton);
-        formContainer.add(formBox);
+        // 回车登录
+        passwordField.addActionListener(e -> doLogin());
         
-        panel.add(formContainer, BorderLayout.CENTER);
+        // 版权信息
+        JLabel footerLabel = new JLabel("© 2026 金万里企业管理");
+        footerLabel.setFont(UIUtils.FONT_SMALL);
+        footerLabel.setForeground(UIUtils.COLOR_TEXT_SECONDARY);
+        footerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        footerLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 0, 0));
         
-        JLabel footerLabel = new JLabel("© 2026 Jinwanli Enterprise Management");
-        footerLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        footerLabel.setFont(new Font("Arial", Font.PLAIN, 10));
-        footerLabel.setForeground(Color.GRAY);
-        footerLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
-        panel.add(footerLabel, BorderLayout.SOUTH);
+        formPanel.add(userPanel);
+        formPanel.add(pwdPanel);
+        formPanel.add(Box.createVerticalStrut(20));
+        formPanel.add(loginButton);
+        formPanel.add(footerLabel);
+        
+        panel.add(formPanel, BorderLayout.CENTER);
 
         return panel;
     }
 
     private void doLogin() {
-        String username = usernameField.getText();
+        String username = usernameField.getText().trim();
         String password = new String(passwordField.getPassword());
+        
+        if (username.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "请输入用户名", "提示", JOptionPane.WARNING_MESSAGE);
+            usernameField.requestFocus();
+            return;
+        }
+        
+        if (password.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "请输入密码", "提示", JOptionPane.WARNING_MESSAGE);
+            passwordField.requestFocus();
+            return;
+        }
         
         if (ConfigManager.validateLogin(username, password)) {
             dispose();
+            if (timer != null) timer.stop();
             new MainFrame();
         } else {
-            JOptionPane.showMessageDialog(this, "用户名或密码错误", "登录失败", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "❌ 用户名或密码错误", "登录失败", JOptionPane.ERROR_MESSAGE);
+            passwordField.setText("");
+            passwordField.requestFocus();
         }
     }
 }
