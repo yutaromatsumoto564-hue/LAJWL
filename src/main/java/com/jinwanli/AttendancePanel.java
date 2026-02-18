@@ -33,8 +33,8 @@ public class AttendancePanel extends JPanel {
         tabbedPane = new JTabbedPane();
         tabbedPane.setFont(UIUtils.FONT_TAB);
         
-        tabbedPane.addTab("📅 月考勤表", createMonthlyView());
-        tabbedPane.addTab("📊 月度汇总", createSummaryView());
+        tabbedPane.addTab("月考勤表", createMonthlyView());
+        tabbedPane.addTab("月度汇总", createSummaryView());
         tabbedPane.addTab("👥 员工档案", createEmployeeView());
         
         add(tabbedPane, BorderLayout.CENTER);
@@ -50,7 +50,7 @@ public class AttendancePanel extends JPanel {
         queryPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UIUtils.COLOR_BORDER));
         
         // 年份选择
-        queryPanel.add(new JLabel("📅 "));
+        queryPanel.add(new JLabel(""));
         queryPanel.add(new JLabel("年份:"));
         yearBox = UIUtils.createComboBox(UIUtils.getRecentYears());
         yearBox.setSelectedItem(String.valueOf(java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)));
@@ -205,10 +205,10 @@ public class AttendancePanel extends JPanel {
             
             // 显示结果
             String resultMsg = String.format(
-                "📊 导入完成！\n\n" +
+                "导入完成！\n\n" +
                 "✅ 成功: %d 条\n" +
                 "❌ 失败: %d 条\n" +
-                "📅 所属月份: %s",
+                "所属月份: %s",
                 importResult.success, importResult.failed, month
             );
             
@@ -284,7 +284,7 @@ public class AttendancePanel extends JPanel {
         toolPanel.setBackground(UIUtils.COLOR_BG_CARD);
         toolPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UIUtils.COLOR_BORDER));
         
-        JLabel titleLabel = new JLabel("📊 月度考勤汇总表");
+        JLabel titleLabel = new JLabel("月度考勤汇总表");
         titleLabel.setFont(UIUtils.FONT_HEADING);
         toolPanel.add(titleLabel);
         

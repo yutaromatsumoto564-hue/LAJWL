@@ -36,7 +36,7 @@ public class SummaryPanel extends JPanel {
             BorderFactory.createEmptyBorder(15, 20, 15, 20)
         ));
         
-        controlPanel.add(new JLabel("📅 "));
+        controlPanel.add(new JLabel(""));
         yearBox = UIUtils.createComboBox(UIUtils.getRecentYears());
         yearBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
         controlPanel.add(yearBox);
@@ -66,16 +66,16 @@ public class SummaryPanel extends JPanel {
         cardsPanel.setMaximumSize(new Dimension(2000, 140));
         
         // 收入卡片 - 绿色
-        incomeLabel = createKPICard(cardsPanel, "💰 本月总收入", "¥ 0.00", 
+        incomeLabel = createKPICard(cardsPanel, "本月总收入", "¥ 0.00", 
             UIUtils.COLOR_SUCCESS_LIGHT, UIUtils.COLOR_SUCCESS);
         // 支出卡片 - 红色
-        expenseLabel = createKPICard(cardsPanel, "📤 本月杂项支出", "¥ 0.00", 
+        expenseLabel = createKPICard(cardsPanel, "本月杂项支出", "¥ 0.00", 
             UIUtils.COLOR_DANGER_LIGHT, UIUtils.COLOR_DANGER);
         // 薪资卡片 - 橙色
-        salaryLabel = createKPICard(cardsPanel, "👥 预计薪资成本", "¥ 0.00", 
+        salaryLabel = createKPICard(cardsPanel, "预计薪资成本", "¥ 0.00", 
             UIUtils.COLOR_WARNING_LIGHT, UIUtils.COLOR_WARNING);
         // 利润卡片 - 蓝色
-        profitLabel = createKPICard(cardsPanel, "📈 本月净利润", "¥ 0.00", 
+        profitLabel = createKPICard(cardsPanel, "本月净利润", "¥ 0.00", 
             UIUtils.COLOR_PRIMARY_LIGHT, UIUtils.COLOR_PRIMARY);
         
         contentPanel.add(cardsPanel);
@@ -97,7 +97,7 @@ public class SummaryPanel extends JPanel {
         chartPanel.setPreferredSize(new Dimension(0, 280));
         chartPanel.setMaximumSize(new Dimension(2000, 280));
         
-        JLabel chartTitle = new JLabel("📊 收支可视化分析");
+        JLabel chartTitle = new JLabel("收支可视化分析");
         chartTitle.setFont(UIUtils.FONT_SUBHEADING);
         chartTitle.setForeground(UIUtils.COLOR_TEXT_PRIMARY);
         chartTitle.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
