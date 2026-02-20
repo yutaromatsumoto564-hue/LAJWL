@@ -7,10 +7,10 @@ public class MainFrame extends JFrame {
     private JPanel contentPanel;
     private CardLayout cardLayout;
     private JPanel navPanel;
-    private String currentPage = "HOME";
+    private String currentPage = "SUMMARY";
     
     // 导航按钮
-    private JButton homeBtn, summaryBtn, attendanceBtn, salesBtn, expenseBtn, backupBtn, exitBtn;
+    private JButton summaryBtn, attendanceBtn, salesBtn, expenseBtn, backupBtn, exitBtn;
 
     public MainFrame() {
         setTitle(ConfigManager.getProperty("app.name"));
@@ -35,7 +35,6 @@ public class MainFrame extends JFrame {
         contentPanel.setLayout(cardLayout);
         contentPanel.setBackground(UIUtils.COLOR_BG_MAIN);
         
-        contentPanel.add(createHomePanel(), "HOME");
         contentPanel.add(new SummaryPanel(), "SUMMARY");
         contentPanel.add(new AttendancePanel(), "ATTENDANCE");
         contentPanel.add(new SalesPanel(), "SALES");
@@ -109,7 +108,6 @@ public class MainFrame extends JFrame {
         
         // 导航按钮区域
         navPanel.add(createNavSection("导航菜单", new JComponent[] {
-            homeBtn = createNavButton("H", "首页", "HOME"),
             summaryBtn = createNavButton("S", "经营总览", "SUMMARY"),
             attendanceBtn = createNavButton("A", "员工考勤", "ATTENDANCE"),
             salesBtn = createNavButton("X", "销量统计", "SALES"),
@@ -239,64 +237,5 @@ public class MainFrame extends JFrame {
         }
     }
 
-    private JPanel createHomePanel() {
-        JPanel panel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                
-                GradientPaint gradient = new GradientPaint(0, 0, new Color(59, 130, 246), 0, getHeight(), new Color(147, 197, 253));
-                g2.setPaint(gradient);
-                g2.fillRect(0, 0, getWidth(), getHeight());
-                
-                g2.setColor(new Color(255, 255, 255, 30));
-                g2.fillOval(50, 50, 200, 200);
-                g2.fillOval(getWidth() - 300, getHeight() - 250, 300, 300);
-                g2.fillOval(getWidth() - 150, 100, 100, 100);
-            }
-        };
-        panel.setLayout(new GridBagLayout());
-        
-        JPanel card = new JPanel();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(new Color(255, 255, 255, 245));
-        card.setBorder(BorderFactory.createEmptyBorder(50, 60, 50, 60));
-        card.setPreferredSize(new Dimension(500, 300));
-        
-        JLabel title = new JLabel("欢迎使用");
-        title.setFont(new Font("Microsoft YaHei", Font.BOLD, 36));
-        title.setForeground(UIUtils.COLOR_TEXT_PRIMARY);
-        title.setAlignmentX(Component.CENTER_ALIGNMENT);
-        
-        JLabel subtitle = new JLabel("金万里企业管理系统");
-        subtitle.setFont(new Font("Microsoft YaHei", Font.PLAIN, 24));
-        subtitle.setForeground(UIUtils.COLOR_TEXT_SECONDARY);
-        subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
-        
-        JLabel desc = new JLabel("专业的企业管理解决方案");
-        desc.setFont(UIUtils.FONT_BODY);
-        desc.setForeground(new Color(148, 163, 184));
-        desc.setAlignmentX(Component.CENTER_ALIGNMENT);
-        desc.setBorder(BorderFactory.createEmptyBorder(20, 0, 30, 0));
-        
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
-        btnPanel.setOpaque(false);
-        
-        JButton startBtn = UIUtils.createButton("开始使用");
-        startBtn.addActionListener(e -> handleNavClick("SUMMARY"));
-        
-        btnPanel.add(startBtn);
-        
-        card.add(title);
-        card.add(Box.createVerticalStrut(10));
-        card.add(subtitle);
-        card.add(desc);
-        card.add(btnPanel);
-        
-        panel.add(card);
-        
-        return panel;
-    }
 }
+

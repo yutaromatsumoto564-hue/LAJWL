@@ -18,6 +18,7 @@ public class AttendancePanel extends JPanel {
     private DefaultTableModel monthlyModel;
     private JComboBox<String> yearBox;
     private JComboBox<String> monthBox;
+    private JLabel grandTotalLabel;
 
     public AttendancePanel() {
         setLayout(new BorderLayout());
@@ -68,11 +69,12 @@ public class AttendancePanel extends JPanel {
 
         panel.add(queryPanel, BorderLayout.NORTH);
 
-        String[] columnNames = new String[32];
+        String[] columnNames = new String[33];
         columnNames[0] = "姓名";
         for (int i = 1; i <= 31; i++) {
             columnNames[i] = i + "日";
         }
+        columnNames[32] = "总时长(h)";
 
         monthlyModel = new DefaultTableModel(columnNames, 0) {
             @Override
@@ -84,12 +86,23 @@ public class AttendancePanel extends JPanel {
         monthlyTable.setFont(UIUtils.FONT_NORMAL);
         monthlyTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 
-        monthlyTable.getColumnModel().getColumn(0).setPreferredWidth(80);
+        monthlyTable.getColumnModel().getColumn(0).setPreferredWidth(60);
         for (int i = 1; i <= 31; i++) {
             monthlyTable.getColumnModel().getColumn(i).setPreferredWidth(25);
         }
+        monthlyTable.getColumnModel().getColumn(32).setPreferredWidth(60);
 
-        panel.add(new JScrollPane(monthlyTable), BorderLayout.CENTER);
+        JScrollPane scrollPane = new JScrollPane(monthlyTable);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 10));
+        bottomPanel.setBackground(UIUtils.COLOR_BG_CARD);
+        grandTotalLabel = new JLabel("当月所有员工出勤总时长: 0.0 h");
+        grandTotalLabel.setFont(new Font("Microsoft YaHei", Font.BOLD, 16));
+        grandTotalLabel.setForeground(UIUtils.COLOR_PRIMARY);
+        bottomPanel.add(grandTotalLabel);
+
+        panel.add(bottomPanel, BorderLayout.SOUTH);
 
         refreshMonthlyTable();
 
@@ -105,9 +118,13 @@ public class AttendancePanel extends JPanel {
         List<Employee> employees = DataManager.getInstance().getEmployees();
         List<AttendanceRecord> monthRecords = DataManager.getInstance().getAttendanceByMonth(year, month);
 
+        double grandTotalHours = 0.0;
+
         for (Employee emp : employees) {
-            Object[] rowData = new Object[32];
+            Object[] rowData = new Object[33];
             rowData[0] = emp.getName();
+
+            double empTotalHours = 0.0;
 
             List<AttendanceRecord> myRecords = monthRecords.stream()
                     .filter(r -> r.getEmployeeId().equals(emp.getId()))
@@ -116,11 +133,20 @@ public class AttendancePanel extends JPanel {
             for (AttendanceRecord r : myRecords) {
                 int day = r.getDayOfMonth();
                 if (day >= 1 && day <= 31) {
-                    rowData[day] = String.valueOf(r.getWorkHours());
+                    double hours = r.getWorkHours();
+                    rowData[day] = hours > 0 ? String.valueOf(hours) : "";
+                    empTotalHours += hours;
                 }
             }
 
+            rowData[32] = String.format("%.1f", empTotalHours);
+            grandTotalHours += empTotalHours;
+
             monthlyModel.addRow(rowData);
+        }
+
+        if (grandTotalLabel != null) {
+            grandTotalLabel.setText(String.format("当月所有员工出勤总时长: %.1f h", grandTotalHours));
         }
 
         System.out.println("已刷新 " + year + "年" + month + "月 的考勤数据");

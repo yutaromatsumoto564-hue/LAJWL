@@ -48,7 +48,7 @@ public class SummaryPanel extends JPanel {
         
         controlPanel.add(new JLabel("月 "));
         
-        JButton refreshBtn = UIUtils.createButton("🔄 刷新数据");
+        JButton refreshBtn = UIUtils.createButton("刷新数据");
         refreshBtn.addActionListener(e -> refreshData());
         controlPanel.add(Box.createHorizontalStrut(10));
         controlPanel.add(refreshBtn);
@@ -115,11 +115,11 @@ public class SummaryPanel extends JPanel {
         statsPanel.setOpaque(false);
         statsPanel.setMaximumSize(new Dimension(2000, 100));
         
-        empCountLabel = createStatCard(statsPanel, "👥 在职员工", "0 人", UIUtils.COLOR_PRIMARY);
-        salesCountLabel = createStatCard(statsPanel, "📦 本月订单", "0 单", UIUtils.COLOR_SUCCESS);
-        abnormalLabel = createStatCard(statsPanel, "⚠️ 考勤异常", "0 人次", UIUtils.COLOR_DANGER);
+        empCountLabel = createStatCard(statsPanel, "在职员工", "0 人", UIUtils.COLOR_PRIMARY);
+        salesCountLabel = createStatCard(statsPanel, "本月订单", "0 单", UIUtils.COLOR_SUCCESS);
+        abnormalLabel = createStatCard(statsPanel, "考勤异常", "0 人次", UIUtils.COLOR_DANGER);
         
-        JLabel statsTitle = new JLabel("📋 运营数据摘要");
+        JLabel statsTitle = new JLabel("运营数据摘要");
         statsTitle.setFont(UIUtils.FONT_SUBHEADING);
         statsTitle.setForeground(UIUtils.COLOR_TEXT_PRIMARY);
         statsTitle.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));

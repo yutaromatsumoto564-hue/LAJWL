@@ -87,45 +87,42 @@ public class AttendanceImporter {
              Workbook workbook = new XSSFWorkbook(fis)) {
             
             Sheet sheet = workbook.getSheetAt(0);
-            
-            // 从文件名提取月份 (格式: 月度汇总表_yyyyMMdd_yyyyMMdd.xlsx)
-            String fileName = sheet.getSheetName();
             String month = extractMonthFromFileName(filePath);
             
-            // 跳过表头，从第3行开始读取（Excel 行号从1开始）
-            // 每4行为一个员工的数据
-            for (int rowNum = 3; rowNum <= sheet.getLastRowNum(); rowNum += 4) {
+            for (int rowNum = 0; rowNum <= sheet.getLastRowNum(); rowNum++) {
                 Row row = sheet.getRow(rowNum);
                 if (row == null) continue;
                 
-                Cell nameCell = row.getCell(1);  // 姓名
-                Cell idCell = row.getCell(2);    // 工号
-                Cell deptCell = row.getCell(3); // 部门
+                Cell nameCell = row.getCell(0);
+                if (nameCell == null) continue;
                 
-                if (nameCell == null || getCellValue(nameCell).isEmpty()) continue;
+                String name = getCellValue(nameCell).trim();
+                if (name.isEmpty() || name.equals("姓名") || name.equals("基本信息")) {
+                    continue;
+                }
                 
-                String name = getCellValue(nameCell);
-                String empId = getCellValue(idCell);
+                String empId = getCellValue(row.getCell(1));
                 
-                // 读取考勤数据（需要读取下一行或同行的多列数据）
-                Row dataRow = sheet.getRow(rowNum);
-                
-                int requiredDays = getCellIntValue(dataRow, 4);   // 应出勤天数
-                double actualDays = getCellDoubleValue(dataRow, 5); // 实际出勤天数
-                double requiredHours = getCellDoubleValue(dataRow, 6); // 应出勤(小时)
-                double actualHours = getCellDoubleValue(dataRow, 7);  // 实际出勤(小时)
-                double paidHours = getCellDoubleValue(dataRow, 8);    // 计薪时长
-                double overtimePay = getCellDoubleValue(dataRow, 9);   // 加班费时长
-                double overtimeOff = getCellDoubleValue(dataRow, 10);   // 调休时长
+                double actualHours = getCellDoubleValue(row, 6);
+                double paidHours = getCellDoubleValue(row, 7); 
                 
                 MonthlyAttendance record = new MonthlyAttendance(
                     empId.isEmpty() || empId.equals("-") ? null : empId,
-                    name, month, requiredDays, actualDays, requiredHours,
-                    actualHours, paidHours, overtimePay, overtimeOff
+                    name, 
+                    month, 
+                    0, 0, 0, 
+                    actualHours, 
+                    paidHours, 
+                    0, 0
                 );
                 
-                records.add(record);
+                boolean exists = records.stream().anyMatch(r -> r.getEmployeeName().equals(name));
+                if (!exists) {
+                    records.add(record);
+                }
             }
+        } catch (Exception e) {
+            throw new IOException("读取文件失败，请确保导入的是 .xlsx 格式的 Excel 文件！", e);
         }
         
         return records;
@@ -201,6 +198,21 @@ public class AttendanceImporter {
      */
     private static double getCellDoubleValue(Row row, int colIndex) {
         Cell cell = row.getCell(colIndex);
+        if (cell == null) return 0.0;
+        
+        switch (cell.getCellType()) {
+            case NUMERIC: return cell.getNumericCellValue();
+            case STRING: 
+                try { return Double.parseDouble(cell.getStringCellValue().trim()); }
+                catch (Exception e) { return 0.0; }
+            default: return 0.0;
+        }
+    }
+    
+    /**
+     * 获取单元格双精度值（从Cell对象）
+     */
+    private static double getCellDoubleValue(Cell cell) {
         if (cell == null) return 0.0;
         
         switch (cell.getCellType()) {

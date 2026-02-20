@@ -1,244 +1,143 @@
-针对你的三大需求：1. 优化界面并支持编辑、2. 取消工号设定、3. 开支增加“投资项目”，下面是完整的代码修改方案。
+一、 解决图标方框、排版错乱与登录界面问题（删除冗余 UI）
+1. 剥离 LoginFrame.java 的花哨代码
 
-一、 支持数据编辑（以开支管理为例）
-目前你的表格通过 isCellEditable(int row, int col) { return false; } 锁死了编辑。为了最安全地修改数据且不破坏现有的序列化逻辑，最佳方案是选中表格行 -> 点击“编辑”按钮 -> 弹窗回显数据进行修改。
+删除 createSplashPanel() 及其相关的开场动画逻辑、Timer 延迟切换代码。
 
-我们需要在 DataManager.java 中增加更新方法，并在对应的 Panel 和 Dialog 中增加编辑逻辑。
+删除 createLoginPanel() 中的 paintComponent 重写（去掉渐变背景）。
 
-1. 修改 DataManager.java (增加修改支持)
-在 DataManager 中增加对开支、员工等数据的更新方法：
-
-Java
-// 在 DataManager.java 中添加：
-public void updateExpenseRecord(int index, ExpenseRecord e) {
-    if(index >= 0 && index < expenseRecords.size()) {
-        expenseRecords.set(index, e);
-        saveExpenses();
-    }
-}
-
-public void updateEmployee(int index, Employee e) {
-    if(index >= 0 && index < employees.size()) {
-        employees.set(index, e);
-        saveEmployees();
-    }
-}
-二、 开支管理增加“投资”及关联项目
-我们需要在开支记录中加入“项目名称”字段，并在录入时动态支持。
-
-1. 修改 ExpenseRecord.java
-增加 targetProject 字段。
+替换图标为文字：
+找到 JLabel userIcon = new JLabel("👤"); 和 JLabel pwdIcon = new JLabel("🔒");，将其直接改为：
 
 Java
-package com.jinwanli.model;
-import java.io.Serializable;
+JLabel userIcon = new JLabel("账号:");
+JLabel pwdIcon = new JLabel("密码:");
+建议：把复杂的 BoxLayout 和 BorderLayout 嵌套全删掉，直接用最简单的绝对布局（setLayout(null)）或标准的 GridLayout(2, 2) 来放账号、密码的 Label 和输入框。
 
-public class ExpenseRecord implements Serializable {
-    private static final long serialVersionUID = 2L; // 建议升一下版本号
-    private String date;
-    private String category;
-    private double amount;
-    private String usage;
-    private String handler;
-    private String remark;
-    private String targetProject; // 【新增】关联项目
+2. 剥离 UIUtils.java 中的重绘代码
 
-    // 更新构造函数
-    public ExpenseRecord(String date, String category, double amount, String usage, String handler, String remark, String targetProject) {
-        this.date = date;
-        this.category = category;
-        this.amount = amount;
-        this.usage = usage;
-        this.handler = handler;
-        this.remark = remark;
-        this.targetProject = targetProject;
-    }
+删除或简化 createButton()、createDangerButton() 等方法中所有重写 paintComponent 的代码。原生的 new JButton("文本") 最稳定，不会因为圆角绘制导致点击事件漂移或排版错乱（这可能也是你“编辑功能没生效”的原因之一，因为自定义按钮的点击穿透或焦点丢失）。
 
-    // 保留原有 Getter，并新增：
-    public String getTargetProject() { return targetProject; }
-    // ... 其他原有 getter
-    public String getDate() { return date; }
-    public String getCategory() { return category; }
-    public double getAmount() { return amount; }
-    public String getUsage() { return usage; }
-    public String getHandler() { return handler; }
-    public String getRemark() { return remark; }
-}
-2. 修改 ExpenseDialog.java (支持投资项与编辑回显)
+全局搜索 "📁"、"💼"、"🔍"、"🔄"、"⚠️" 等 Emoji 符号，全部删除或替换为普通汉字（如“搜索”、“刷新”）。
+
+二、 确保“编辑功能”生效的核心排查
+编辑功能没有生效，通常是因为表格视图（View）和底层数据（Model）脱节。
+在 ExpensePanel.java（或其他 Panel）的编辑按钮事件中，请务必确保按以下三步走：
+
+取正确的数据索引：int row = table.getSelectedRow();
+
+更新 DataManager：把弹窗返回的修改后的对象，替换掉 List 里对应的对象。
+
+Java
+// 必须有这一步将修改同步到内存
+DataManager.getInstance().getExpenseRecords().set(row, updatedRecord); 
+// DataManager 中必须调用对应的 save 方法写入 .dat 文件
+DataManager.getInstance().saveExpenses(); 
+刷新表格视图：必须调用 model.setRowCount(0); 然后重新 for 循环添加行，或者直接调用你写的 refreshData(); 方法，否则界面还是老数据。
+
+三、 考勤表一页展示（消除横向滚动条）
+当前 1~31 号需要滚动是因为列太宽，且表格不允许自动挤压。
+
+修改 AttendancePanel.java 的 createMonthlyView() 方法：
+
+删除：monthlyTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+
+修改为：monthlyTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS); （让表格自动拉伸填满可视区域）
+
+缩减列宽：把循环里的 setPreferredWidth(40) 改得极小（比如 20 或 25），因为我们马上要把它改成只显示一个数字。
+
+四、 考勤数据导入与录入重写（取消迟到早退，直接输时长）
+既然只关心工作了多少小时，我们需要砍掉多余的分类。
+
+1. 修改 AttendanceRecord.java
+
+删除 private String status; 字段。
+
+将 overtimeHours 字段改名为更直接的 workHours（出勤时长）。
+
+2. 修改 AttendanceDialog.java（手动录入界面）
+
+删除 关于 statusBox（正常、迟到、早退下拉框）的所有代码。
+
+将 overtimeField 的标签改为 "出勤时长(h):"。
+
+getData() 方法直接返回输入的数值（小时）。
+
+3. 修改 AttendancePanel.java 显示逻辑
+
+在 refreshMonthlyTable() 循环中，删除判断逻辑：
+
+Java
+// 删掉这堆判断
+// if ("迟到".equals(r.getStatus())) symbol = "L"; ...
+改为直接显示时长：
+
+Java
+rowData[day] = String.valueOf(r.getWorkHours()); // 直接填入 8.0, 9.5 等数字
+五、 数据备份重写（生成 Excel 月度表格）
+你之前在 pom.xml 中已经引入了 org.apache.poi:poi-ooxml:5.2.3。现在的 .dat 和 .zip 备份对普通人不可读。我们需要修改 BackupManager.java，让其生成真实的 .xlsx。
+
+重写 BackupManager.java 建议方案：
+抛弃压缩 .dat 文件的做法，直接查出数据写入 Excel：
+
 Java
 package com.jinwanli;
 
-import com.jinwanli.model.ExpenseRecord;
-import javax.swing.*;
-import java.awt.*;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import java.io.FileOutputStream;
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+import com.jinwanli.model.*;
 
-public class ExpenseDialog extends JDialog {
-    private JComboBox<String> categoryBox;
-    private JTextField amountField;
-    private JTextField usageField;
-    private JTextField handlerField;
-    private JTextField dateField;
-    private JTextField projectField; // 【新增】项目名称
-    private boolean confirmed = false;
-
-    // 【新增】支持传入已有数据进行编辑
-    public ExpenseDialog(JFrame parent, ExpenseRecord existingRecord) {
-        super(parent, existingRecord == null ? "添加支出记录" : "编辑支出记录", true);
-        setLayout(new BorderLayout());
-        setSize(400, 420);
-        setLocationRelativeTo(parent);
-        setResizable(false);
-
-        // ... 前面的 UI 标题代码保持不变 ...
-
-        JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBackground(UIUtils.COLOR_BG_CARD);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 5, 10, 5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        
-        // 分类
-        gbc.gridx = 0; gbc.gridy = 0;
-        formPanel.add(new JLabel("分类:"), gbc);
-        categoryBox = UIUtils.createComboBox(new String[]{"原材料采购", "车旅费", "伙食费", "电费", "房租", "设备维护", "项目投资", "其他支出"});
-        gbc.gridx = 1;
-        formPanel.add(categoryBox, gbc);
-
-        // 【新增】项目名称 (当选择项目投资时启用)
-        gbc.gridx = 0; gbc.gridy = 1;
-        formPanel.add(new JLabel("投资项目:"), gbc);
-        projectField = UIUtils.createTextField();
-        projectField.setEnabled(false); // 默认禁用
-        projectField.setToolTipText("仅在选择'项目投资'时可用");
-        gbc.gridx = 1;
-        formPanel.add(projectField, gbc);
-
-        // 联动事件
-        categoryBox.addActionListener(e -> {
-            boolean isInvestment = "项目投资".equals(categoryBox.getSelectedItem());
-            projectField.setEnabled(isInvestment);
-            if (!isInvestment) projectField.setText("");
-        });
-        
-        // 金额、用途、经手人、日期... (原代码，注意 gridy 依次 +1)
-        // ... (省略部分标准表单字段添加代码) ...
-        // ... 金额(gridy=2), 用途(gridy=3), 经手人(gridy=4), 日期(gridy=5)
-        
-        // 如果是编辑模式，回显数据
-        if (existingRecord != null) {
-            categoryBox.setSelectedItem(existingRecord.getCategory());
-            amountField.setText(String.valueOf(existingRecord.getAmount()));
-            usageField.setText(existingRecord.getUsage());
-            handlerField.setText(existingRecord.getHandler());
-            dateField.setText(existingRecord.getDate());
-            if ("项目投资".equals(existingRecord.getCategory())) {
-                projectField.setEnabled(true);
-                projectField.setText(existingRecord.getTargetProject());
-            }
-        }
-
-        // ... 底部保存按钮逻辑保持不变 ...
-    }
-
-    public ExpenseRecord getData() {
-        if (!confirmed) return null;
+public class BackupManager {
+    public static void performBackup() {
         try {
-            double amount = Double.parseDouble(amountField.getText().trim());
-            return new ExpenseRecord(
-                dateField.getText().trim(),
-                (String) categoryBox.getSelectedItem(),
-                amount,
-                usageField.getText().trim(),
-                handlerField.getText().trim(),
-                "",
-                projectField.getText().trim() // 获取项目
-            );
+            File backupDir = new File("backup");
+            if (!backupDir.exists()) backupDir.mkdirs();
+
+            String timestamp = new SimpleDateFormat("yyyy-MM").format(new Date());
+            String fileName = "backup/金万里月度数据备份_" + timestamp + ".xlsx";
+            
+            Workbook workbook = new XSSFWorkbook();
+            
+            // 1. 生成销售记录 Sheet
+            Sheet salesSheet = workbook.createSheet("销售记录");
+            Row salesHeader = salesSheet.createRow(0);
+            salesHeader.createCell(0).setCellValue("日期");
+            salesHeader.createCell(1).setCellValue("客户");
+            salesHeader.createCell(2).setCellValue("总金额");
+            List<SalesRecord> sales = DataManager.getInstance().getSalesRecords();
+            int r = 1;
+            for (SalesRecord record : sales) {
+                Row row = salesSheet.createRow(r++);
+                row.createCell(0).setCellValue(record.getDate());
+                row.createCell(1).setCellValue(record.getShipperName());
+                row.createCell(2).setCellValue(record.getTotalAmount());
+            }
+
+            // 2. 生成开支记录 Sheet (同理)
+            Sheet expenseSheet = workbook.createSheet("开支与投资记录");
+            // ... 写入表头和 ExpenseRecords 数据 ...
+
+            // 3. 生成考勤记录 Sheet (同理)
+            Sheet attendanceSheet = workbook.createSheet("考勤数据(小时)");
+            // ... 写入表头和 AttendanceRecords 数据 ...
+
+            // 输出到文件
+            try (FileOutputStream out = new FileOutputStream(fileName)) {
+                workbook.write(out);
+            }
+            workbook.close();
+            
+            javax.swing.JOptionPane.showMessageDialog(null, "成功生成报表：" + fileName);
+
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "金额输入错误！", "错误", JOptionPane.ERROR_MESSAGE);
-            return null;
+            e.printStackTrace();
+            javax.swing.JOptionPane.showMessageDialog(null, "备份导出失败：" + e.getMessage());
         }
     }
 }
-3. 修改 ExpensePanel.java (加入编辑按钮和项目列)
-Java
-// 在 ExpensePanel.java 中修改表头：
-String[] columnNames = {"日期", "分类", "关联项目", "金额", "用途", "经手人"};
-
-// 在 buttonPanel 中新增编辑按钮：
-JButton editBtn = UIUtils.createButton("编辑记录");
-editBtn.addActionListener(e -> {
-    int row = table.getSelectedRow();
-    if (row >= 0) {
-        ExpenseRecord existing = DataManager.getInstance().getExpenseRecords().get(row);
-        ExpenseDialog dialog = new ExpenseDialog((JFrame) SwingUtilities.getWindowAncestor(this), existing);
-        dialog.setVisible(true);
-        ExpenseRecord updatedRecord = dialog.getData();
-        if (updatedRecord != null) {
-            DataManager.getInstance().updateExpenseRecord(row, updatedRecord);
-            refreshData(); // 刷新表格
-        }
-    } else {
-        JOptionPane.showMessageDialog(this, "请先选择需要编辑的行", "提示", JOptionPane.WARNING_MESSAGE);
-    }
-});
-buttonPanel.add(editBtn); // 加在增加和删除按钮中间
-
-// 修改 refreshData() 填充逻辑：
-private void refreshData() {
-    model.setRowCount(0);
-    List<ExpenseRecord> list = DataManager.getInstance().getExpenseRecords();
-    for (ExpenseRecord r : list) {
-        model.addRow(new Object[]{
-            r.getDate(), 
-            r.getCategory(), 
-            r.getTargetProject() != null ? r.getTargetProject() : "-", // 显示项目
-            String.format("%.2f", r.getAmount()), 
-            r.getUsage(), 
-            r.getHandler()
-        });
-    }
-}
-三、 取消工号设定
-为了保证后端系统依然有唯一标识防止重名报错，我们将 id 改为系统后台自动生成的 UUID 并将其对用户彻底隐藏。
-
-1. 修改 EmployeeDialog.java
-完全删除其中关于 idField（工号）的代码行。
-在 getData() 方法中后台强制生成 ID：
-
-Java
-// 在 EmployeeDialog.java 的 getData() 方法中：
-public Employee getData() {
-    if (!confirmed) return null;
-    try {
-        String name = nameField.getText().trim();
-        // 自动隐藏生成唯一ID，取消工号的外部输入概念
-        String id = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8); 
-        
-        String pos = (String) posBox.getSelectedItem();
-        // ... (其他字段解析不变)
-        return new Employee(id, name, pos, phone, idCard, baseSalary, perfSalary, overtime);
-    } //...
-}
-2. 修改 AttendancePanel.java (隐藏工号列)
-在 AttendancePanel.java 中，有三个地方显示了工号，需要将其剔除：
-
-员工档案表：
-将 String[] cols = {"工号", "姓名", "职位"...} 改为 String[] cols = {"姓名", "职位", "联系电话"...}。
-在 loadData.run() 中，剔除 e.getId()，直接从 e.getName() 开始 addRow。
-
-月考勤表：
-将 columnNames[32] = "工号"; 移除，表格列数变为 32 列，不再展示工号。
-
-月度汇总表：
-将 String[] cols = {"姓名", "工号", "月份"...} 中的 "工号" 删除，并在 refreshSummaryTable 时不将 empId 放入 addRow。
-
-总结建议
-采用这种方案的优势在于：
-
-界面体验跃升：你依然享受目前高颜值的扁平化 Swing UI（UIUtils 配置得很好），但在操作上获得了完整的 CRUD（增删改查）闭环体验。
-
-底层兼容：你的数据存储核心 .dat 序列化机制不需要大改，只要清理一下项目根目录的旧 expenses.dat 等文件，再重新运行即可生效。
-
-彻底弱化“工号”概念：前端再也不会看到工号，无论是录入、考勤还是打印预览，完全以员工的姓名为主导，极大简化了小微企业的管理成本。
+执行建议：
+把你项目里跟 paintComponent 和 Graphics2D 沾边的为了“好看”写的代码先大刀阔斧地砍掉。界面换回默认的灰色风格，把各个 Dialog 里的输入框对齐，先跑通“编辑”和“纯数字考勤录入”这两条线！有问题可以贴具体报错或现象。
