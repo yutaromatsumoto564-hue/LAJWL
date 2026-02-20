@@ -282,41 +282,65 @@ public class AttendanceImporter {
             Sheet sheet = workbook.getSheetAt(0);
             List<Employee> employees = DataManager.getInstance().getEmployees();
             
-            String monthFormatted = String.format("%02d", Integer.parseInt(monthStr));
+            int headerRowIdx = -1;
+            for (int r = 0; r <= 5; r++) { 
+                Row row = sheet.getRow(r);
+                if (row != null && "姓名".equals(getCellValue(row.getCell(0)).trim())) {
+                    headerRowIdx = r;
+                    break;
+                }
+            }
+            if (headerRowIdx == -1) throw new Exception("未能识别表头，请确保表格第一列包含姓名！");
 
-            for (int rowNum = 0; rowNum <= sheet.getLastRowNum(); rowNum++) {
+            for (int rowNum = headerRowIdx + 1; rowNum <= sheet.getLastRowNum(); rowNum++) {
                 Row row = sheet.getRow(rowNum);
                 if (row == null) continue;
                 
-                Cell nameCell = row.getCell(0);
-                if (nameCell == null) continue;
-                String name = getCellValue(nameCell).trim();
+                String name = getCellValue(row.getCell(0)).trim();
                 if (name.isEmpty() || name.equals("姓名") || name.equals("基本信息")) continue;
+                
+                String dateRaw = getCellValue(row.getCell(3)).trim();
+                if (dateRaw.length() < 8) continue;
+                
+                String formattedDate = dateRaw;
+                if (formattedDate.endsWith(".0")) formattedDate = formattedDate.replace(".0", "");
+                if (formattedDate.length() == 8 && !formattedDate.contains("-")) {
+                    formattedDate = formattedDate.substring(0, 4) + "-" + 
+                                    formattedDate.substring(4, 6) + "-" + 
+                                    formattedDate.substring(6, 8);
+                }
                 
                 String empId = matchEmployeeId(name, employees);
                 if (empId == null) {
                     empId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
                     Employee newEmp = new Employee(empId, name, "员工", "-", "-", 0.0, 0.0, 0.0);
                     DataManager.getInstance().addEmployee(newEmp);
+                    employees.add(newEmp);
                 }
-
-                int startCol = 17; 
-                for (int day = 1; day <= 31; day++) {
-                    Cell dayCell = row.getCell(startCol + day - 1);
-                    if (dayCell != null) {
-                        String cellVal = getCellValue(dayCell).trim();
-                        try {
-                            if (!cellVal.isEmpty() && !cellVal.equals("-")) {
-                                String numStr = cellVal.replaceAll("[^0-9.]", ""); 
-                                if (!numStr.isEmpty()) {
-                                    double hours = Double.parseDouble(numStr);
-                                    String date = yearStr + "-" + monthFormatted + "-" + String.format("%02d", day);
-                                    AttendanceRecord record = new AttendanceRecord(empId, date, hours);
-                                    DataManager.getInstance().addAttendanceRecord(record);
-                                }
-                            }
-                        } catch (Exception ignored) {}
+                
+                java.util.List<Integer> punches = new java.util.ArrayList<>();
+                for (int c = 4; c <= 9; c++) {
+                    Cell timeCell = row.getCell(c);
+                    if (timeCell != null) {
+                        String timeVal = getCellValue(timeCell).trim();
+                        if (timeVal.matches("^\\d{2}:\\d{2}$")) {
+                            String[] parts = timeVal.split(":");
+                            int minutes = Integer.parseInt(parts[0]) * 60 + Integer.parseInt(parts[1]);
+                            punches.add(minutes);
+                        }
                     }
+                }
+                
+                double hours = 0.0;
+                if (punches.size() >= 2) {
+                    int min = java.util.Collections.min(punches);
+                    int max = java.util.Collections.max(punches);
+                    hours = Math.round(((max - min) / 60.0) * 10.0) / 10.0;
+                }
+                
+                if (hours > 0) {
+                    AttendanceRecord record = new AttendanceRecord(empId, formattedDate, hours);
+                    DataManager.getInstance().addAttendanceRecord(record);
                 }
             }
         }
