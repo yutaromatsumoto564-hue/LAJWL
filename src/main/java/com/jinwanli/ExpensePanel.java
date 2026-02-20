@@ -32,7 +32,7 @@ public class ExpensePanel extends JPanel {
         
         add(queryPanel, BorderLayout.NORTH);
 
-        String[] columnNames = {"日期", "分类", "关联项目", "金额", "用途", "经手人"};
+        String[] columnNames = {"日期", "分类", "关联项目", "金额(元)", "用途", "经手人"};
         model = new DefaultTableModel(columnNames, 0) {
             @Override 
             public boolean isCellEditable(int row, int col) { 
