@@ -37,3 +37,16 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+# 忽略程序生成的 PDF 和 Excel 备份单据
+*.pdf
+*.xlsx
+*.csv
+
+# 忽略本地运行时产生的数据文件目录和备份目录
+/data/
+/backup/
+
+# 忽略临时文本和日志
+*.txt
+*.log
