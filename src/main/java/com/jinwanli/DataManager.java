@@ -84,6 +84,13 @@ public class DataManager {
             saveSales(); 
         } 
     }
+
+    public void updateSalesRecord(int index, SalesRecord s) {
+        if(index >= 0 && index < salesRecords.size()) {
+            salesRecords.set(index, s);
+            saveSales();
+        }
+    }
     
     private void saveSales() { saveList(salesRecords, "sales.dat"); }
 

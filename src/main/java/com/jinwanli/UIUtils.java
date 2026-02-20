@@ -25,16 +25,16 @@ public class UIUtils {
     public static final Color COLOR_WARNING = new Color(251, 191, 36);
     public static final Color COLOR_WARNING_LIGHT = new Color(254, 249, 232);
 
-    public static final Font FONT_TITLE = new Font("Microsoft YaHei", Font.BOLD, 18);
-    public static final Font FONT_HEADING = new Font("Microsoft YaHei", Font.BOLD, 16);
-    public static final Font FONT_SUBHEADING = new Font("Microsoft YaHei", Font.BOLD, 16);
-    public static final Font FONT_BODY = new Font("Microsoft YaHei", Font.PLAIN, 14);
-    public static final Font FONT_BODY_BOLD = new Font("Microsoft YaHei", Font.BOLD, 14);
-    public static final Font FONT_NORMAL = new Font("Microsoft YaHei", Font.PLAIN, 14);
-    public static final Font FONT_TAB = new Font("Microsoft YaHei", Font.PLAIN, 14);
-    public static final Font FONT_SMALL = new Font("Microsoft YaHei", Font.PLAIN, 12);
-    public static final Font FONT_BOLD = new Font("Microsoft YaHei", Font.BOLD, 16);
-    public static final Font FONT_NUMBER = new Font("Arial", Font.BOLD, 28);
+    public static final Font FONT_TITLE = new Font("Dialog", Font.BOLD, 18);
+    public static final Font FONT_HEADING = new Font("Dialog", Font.BOLD, 16);
+    public static final Font FONT_SUBHEADING = new Font("Dialog", Font.BOLD, 16);
+    public static final Font FONT_BODY = new Font("Dialog", Font.PLAIN, 14);
+    public static final Font FONT_BODY_BOLD = new Font("Dialog", Font.BOLD, 14);
+    public static final Font FONT_NORMAL = new Font("Dialog", Font.PLAIN, 14);
+    public static final Font FONT_TAB = new Font("Dialog", Font.PLAIN, 14);
+    public static final Font FONT_SMALL = new Font("Dialog", Font.PLAIN, 12);
+    public static final Font FONT_BOLD = new Font("Dialog", Font.BOLD, 16);
+    public static final Font FONT_NUMBER = new Font("Dialog", Font.BOLD, 28);
 
     public static final int RADIUS_SMALL = 6;
     public static final int RADIUS_MEDIUM = 10;

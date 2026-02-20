@@ -31,4 +31,10 @@ public class SalesRecord implements Serializable {
     public double getWeightPerBasket() { return weightPerBasket; }
     public double getPricePerJin() { return pricePerJin; }
     public String getDate() { return date; }
+
+    public void setShipperName(String shipperName) { this.shipperName = shipperName; }
+    public void setBasketCount(int basketCount) { this.basketCount = basketCount; }
+    public void setWeightPerBasket(double weightPerBasket) { this.weightPerBasket = weightPerBasket; }
+    public void setPricePerJin(double pricePerJin) { this.pricePerJin = pricePerJin; }
+    public void setDate(String date) { this.date = date; }
 }

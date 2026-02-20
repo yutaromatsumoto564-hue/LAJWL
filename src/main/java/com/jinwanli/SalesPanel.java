@@ -22,7 +22,39 @@ public class SalesPanel extends JPanel {
 
         String[] columnNames = {"货主", "筐数", "每筐(斤)", "净重(斤)", "单价", "总金额", "日期"};
         model = new DefaultTableModel(columnNames, 0) {
-            @Override public boolean isCellEditable(int row, int col) { return false; }
+            @Override
+            public boolean isCellEditable(int row, int col) {
+                return true;
+            }
+            
+            @Override
+            public void setValueAt(Object aValue, int row, int column) {
+                String newValue = aValue.toString().trim();
+                SalesRecord record = DataManager.getInstance().getSalesRecords().get(row);
+                
+                try {
+                    switch (column) {
+                        case 0: record.setShipperName(newValue); break;
+                        case 1: record.setBasketCount(Integer.parseInt(newValue)); break;
+                        case 2: record.setWeightPerBasket(Double.parseDouble(newValue)); break;
+                        case 3: break;
+                        case 4: 
+                            record.setPricePerJin(Double.parseDouble(newValue)); 
+                            break;
+                        case 5: break;
+                        case 6: record.setDate(newValue); break;
+                    }
+                    DataManager.getInstance().updateSalesRecord(row, record);
+                    super.setValueAt(aValue, row, column);
+                    
+                    if (column == 1 || column == 2 || column == 4) {
+                        super.setValueAt(String.format("%.2f", record.getNetWeight()), row, 3);
+                        super.setValueAt(String.format("%.2f", record.getTotalAmount()), row, 5);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(null, "输入数字格式有误！", "错误", JOptionPane.ERROR_MESSAGE);
+                }
+            }
         };
         table = new JTable(model);
         table.setRowHeight(30);
