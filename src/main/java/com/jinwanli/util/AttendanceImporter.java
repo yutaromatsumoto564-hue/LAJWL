@@ -310,14 +310,6 @@ public class AttendanceImporter {
                                     formattedDate.substring(6, 8);
                 }
                 
-                String empId = matchEmployeeId(name, employees);
-                if (empId == null) {
-                    empId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
-                    Employee newEmp = new Employee(empId, name, "员工", "-", "-", 0.0, 0.0, 0.0);
-                    DataManager.getInstance().addEmployee(newEmp);
-                    employees.add(newEmp);
-                }
-                
                 java.util.List<Integer> punches = new java.util.ArrayList<>();
                 StringBuilder punchTextBuilder = new StringBuilder();
                 
@@ -349,6 +341,14 @@ public class AttendanceImporter {
                 }
                 
                 if (hours > 0 || isAbnormal) {
+                    String empId = matchEmployeeId(name, employees);
+                    if (empId == null) {
+                        empId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+                        Employee newEmp = new Employee(empId, name, "员工", "-", "-", 0.0, 0.0, 0.0);
+                        DataManager.getInstance().addEmployee(newEmp);
+                        employees.add(newEmp);
+                    }
+                    
                     AttendanceRecord record = new AttendanceRecord(empId, formattedDate, hours, isAbnormal, punchDetails);
                     DataManager.getInstance().addAttendanceRecord(record);
                 }

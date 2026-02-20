@@ -195,7 +195,7 @@ public class AttendancePanel extends JPanel {
         monthlyModel.setRowCount(0);
 
         String year = (String) yearBox.getSelectedItem();
-        String month = (String) monthBox.getSelectedItem();
+        String month = String.format("%02d", Integer.parseInt((String) monthBox.getSelectedItem()));
 
         List<Employee> employees = DataManager.getInstance().getEmployees();
         List<AttendanceRecord> monthRecords = DataManager.getInstance().getAttendanceByMonth(year, month);
@@ -203,14 +203,18 @@ public class AttendancePanel extends JPanel {
         double grandTotalHours = 0.0;
 
         for (Employee emp : employees) {
+            List<AttendanceRecord> myRecords = monthRecords.stream()
+                    .filter(r -> r.getEmployeeId().equals(emp.getId()))
+                    .collect(Collectors.toList());
+
+            if (myRecords.isEmpty()) {
+                continue;
+            }
+
             Object[] rowData = new Object[33];
             rowData[0] = emp.getName();
 
             double empTotalHours = 0.0;
-
-            List<AttendanceRecord> myRecords = monthRecords.stream()
-                    .filter(r -> r.getEmployeeId().equals(emp.getId()))
-                    .collect(Collectors.toList());
 
             for (AttendanceRecord r : myRecords) {
                 int day = r.getDayOfMonth();
