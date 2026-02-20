@@ -123,7 +123,7 @@ public class SalesPanel extends JPanel {
         content.put("商品净重:", netWeight + " 斤");
         content.put("销售单价:", price + " 元/斤");
         content.put("----------------", "--------------------");
-        content.put("合计金额:", "¥ " + total);
+        content.put("合计金额:", total + " 元");
 
         String footer = "金万里企业管理系统\n联系电话: 138-xxxx-xxxx\n谢谢惠顾！";
 

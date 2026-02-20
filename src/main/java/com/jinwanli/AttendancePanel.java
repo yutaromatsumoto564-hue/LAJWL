@@ -242,7 +242,7 @@ public class AttendancePanel extends JPanel {
         content.put("加班补贴:", String.format("%.2f", e.getOvertimeSalary()));
         content.put("扣除项:", "0.00");
         content.put("----------------", "--------------------");
-        content.put("实发工资:", String.format("¥ %.2f", e.getTotalSalary()));
+        content.put("实发工资:", String.format("%.2f 元", e.getTotalSalary()));
 
         String footer = "金万里企业管理系统 - 薪资凭证\n请核对无误后签字确认。\n签字：__________";
         PdfUtils.generateAndOpenPdf("工资单-" + e.getName(), "员工薪资单", content, footer);

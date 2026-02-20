@@ -66,16 +66,13 @@ public class SummaryPanel extends JPanel {
         cardsPanel.setMaximumSize(new Dimension(2000, 140));
         
         // 收入卡片 - 绿色
-        incomeLabel = createKPICard(cardsPanel, "本月总收入", "¥ 0.00", 
+        incomeLabel = createKPICard(cardsPanel, "本月总收入", "0.00 元", 
             UIUtils.COLOR_SUCCESS_LIGHT, UIUtils.COLOR_SUCCESS);
-        // 支出卡片 - 红色
-        expenseLabel = createKPICard(cardsPanel, "本月杂项支出", "¥ 0.00", 
+        expenseLabel = createKPICard(cardsPanel, "本月杂项支出", "0.00 元", 
             UIUtils.COLOR_DANGER_LIGHT, UIUtils.COLOR_DANGER);
-        // 薪资卡片 - 橙色
-        salaryLabel = createKPICard(cardsPanel, "预计薪资成本", "¥ 0.00", 
+        salaryLabel = createKPICard(cardsPanel, "预计薪资成本", "0.00 元", 
             UIUtils.COLOR_WARNING_LIGHT, UIUtils.COLOR_WARNING);
-        // 利润卡片 - 蓝色
-        profitLabel = createKPICard(cardsPanel, "本月净利润", "¥ 0.00", 
+        profitLabel = createKPICard(cardsPanel, "本月净利润", "0.00 元", 
             UIUtils.COLOR_PRIMARY_LIGHT, UIUtils.COLOR_PRIMARY);
         
         contentPanel.add(cardsPanel);
@@ -249,12 +246,12 @@ public class SummaryPanel extends JPanel {
         long orderCount = sales.stream().filter(s -> s.getDate().startsWith(datePrefix)).count();
         long abnormalCount = 0;
 
-        incomeLabel.setText(String.format("¥ %.2f", currentIncome));
-        expenseLabel.setText(String.format("¥ %.2f", currentExpense));
-        salaryLabel.setText(String.format("¥ %.2f", currentSalary));
+        incomeLabel.setText(String.format("%.2f 元", currentIncome));
+        expenseLabel.setText(String.format("%.2f 元", currentExpense));
+        salaryLabel.setText(String.format("%.2f 元", currentSalary));
         
         double profit = currentIncome - currentExpense - currentSalary;
-        profitLabel.setText(String.format("¥ %.2f", profit));
+        profitLabel.setText(String.format("%.2f 元", profit));
         if (profit >= 0) {
             profitLabel.setForeground(UIUtils.COLOR_PRIMARY);
         } else {
