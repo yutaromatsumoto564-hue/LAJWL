@@ -160,7 +160,7 @@ public class AttendancePanel extends JPanel {
                             ((javax.swing.JComponent) c).setToolTipText(record.getPunchDetails());
                             
                             if (value == null || value.toString().isEmpty()) {
-                                setText("缺卡");
+                                setText("");
                             }
                         }
                     }
