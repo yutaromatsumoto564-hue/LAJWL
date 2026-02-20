@@ -7,29 +7,26 @@ public class AttendanceRecord implements Serializable {
     private String employeeId;
     private String employeeName;
     private String date;
-    private String status;
-    private double overtimeHours;
+    private double workHours;
 
-    public AttendanceRecord(String employeeId, String employeeName, String date, String status, double overtimeHours) {
+    public AttendanceRecord(String employeeId, String employeeName, String date, double workHours) {
         this.employeeId = employeeId;
         this.employeeName = employeeName;
         this.date = date;
-        this.status = status;
-        this.overtimeHours = overtimeHours;
+        this.workHours = workHours;
     }
 
     public String getEmployeeId() { return employeeId; }
     public String getEmployeeName() { return employeeName; }
     public String getDate() { return date; }
-    public String getStatus() { return status; }
-    public double getOvertimeHours() { return overtimeHours; }
-    
+    public double getWorkHours() { return workHours; }
+
     public int getDay() {
         try {
             return Integer.parseInt(date.substring(date.lastIndexOf("-") + 1));
         } catch (Exception e) { return 0; }
     }
-    
+
     public int getDayOfMonth() {
         try {
             return Integer.parseInt(date.split("-")[2]);

@@ -1,60 +1,113 @@
 package com.jinwanli;
 
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
+import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.stream.Stream;
+import java.util.List;
+
+import com.jinwanli.model.*;
 
 public class BackupManager {
-    private static final String BACKUP_DIR = "backup";
-    private static final String DATE_FORMAT = "yyyyMMdd_HHmmss";
-
     public static void performBackup() {
         try {
-            Path backupPath = Paths.get(BACKUP_DIR);
-            if (!Files.exists(backupPath)) {
-                Files.createDirectories(backupPath);
+            File backupDir = new File("backup");
+            if (!backupDir.exists()) backupDir.mkdirs();
+
+            String timestamp = new SimpleDateFormat("yyyy-MM").format(new Date());
+            String fileName = "backup/金万里月度数据备份_" + timestamp + ".xlsx";
+
+            Workbook workbook = new XSSFWorkbook();
+
+            Sheet salesSheet = workbook.createSheet("销售记录");
+            Row salesHeader = salesSheet.createRow(0);
+            salesHeader.createCell(0).setCellValue("日期");
+            salesHeader.createCell(1).setCellValue("客户");
+            salesHeader.createCell(2).setCellValue("总金额");
+            List<SalesRecord> sales = DataManager.getInstance().getSalesRecords();
+            int r = 1;
+            for (SalesRecord record : sales) {
+                Row row = salesSheet.createRow(r++);
+                row.createCell(0).setCellValue(record.getDate());
+                row.createCell(1).setCellValue(record.getShipperName());
+                row.createCell(2).setCellValue(record.getTotalAmount());
             }
 
-            String timestamp = new SimpleDateFormat(DATE_FORMAT).format(new Date());
-            String fileName = "backup_" + timestamp + ".zip";
-            Path targetFile = backupPath.resolve(fileName);
+            Sheet expenseSheet = workbook.createSheet("开支与投资记录");
+            Row expenseHeader = expenseSheet.createRow(0);
+            expenseHeader.createCell(0).setCellValue("日期");
+            expenseHeader.createCell(1).setCellValue("分类");
+            expenseHeader.createCell(2).setCellValue("关联项目");
+            expenseHeader.createCell(3).setCellValue("金额");
+            expenseHeader.createCell(4).setCellValue("用途");
+            expenseHeader.createCell(5).setCellValue("经手人");
+            List<ExpenseRecord> expenses = DataManager.getInstance().getExpenseRecords();
+            r = 1;
+            for (ExpenseRecord record : expenses) {
+                Row row = expenseSheet.createRow(r++);
+                row.createCell(0).setCellValue(record.getDate());
+                row.createCell(1).setCellValue(record.getCategory());
+                row.createCell(2).setCellValue(record.getTargetProject() != null ? record.getTargetProject() : "-");
+                row.createCell(3).setCellValue(record.getAmount());
+                row.createCell(4).setCellValue(record.getUsage());
+                row.createCell(5).setCellValue(record.getHandler());
+            }
 
-            // 模拟创建文件 (实际应写入 ZipOutputStream)
-            Files.createFile(targetFile);
-            System.out.println("备份成功: " + targetFile.toAbsolutePath());
+            Sheet attendanceSheet = workbook.createSheet("考勤数据(小时)");
+            Row attendanceHeader = attendanceSheet.createRow(0);
+            attendanceHeader.createCell(0).setCellValue("员工ID");
+            attendanceHeader.createCell(1).setCellValue("员工姓名");
+            attendanceHeader.createCell(2).setCellValue("日期");
+            attendanceHeader.createCell(3).setCellValue("工作时长(小时)");
+            List<AttendanceRecord> attendance = DataManager.getInstance().getAttendanceRecords();
+            r = 1;
+            for (AttendanceRecord record : attendance) {
+                Row row = attendanceSheet.createRow(r++);
+                row.createCell(0).setCellValue(record.getEmployeeId());
+                row.createCell(1).setCellValue(record.getEmployeeName());
+                row.createCell(2).setCellValue(record.getDate());
+                row.createCell(3).setCellValue(record.getWorkHours());
+            }
 
-            cleanupOldBackups(backupPath);
+            Sheet employeeSheet = workbook.createSheet("员工信息");
+            Row employeeHeader = employeeSheet.createRow(0);
+            employeeHeader.createCell(0).setCellValue("工号");
+            employeeHeader.createCell(1).setCellValue("姓名");
+            employeeHeader.createCell(2).setCellValue("职位");
+            employeeHeader.createCell(3).setCellValue("联系电话");
+            employeeHeader.createCell(4).setCellValue("身份证号");
+            employeeHeader.createCell(5).setCellValue("基本工资");
+            employeeHeader.createCell(6).setCellValue("绩效奖金");
+            employeeHeader.createCell(7).setCellValue("加班补贴");
+            employeeHeader.createCell(8).setCellValue("总工资");
+            List<Employee> employees = DataManager.getInstance().getEmployees();
+            r = 1;
+            for (Employee emp : employees) {
+                Row row = employeeSheet.createRow(r++);
+                row.createCell(0).setCellValue(emp.getId());
+                row.createCell(1).setCellValue(emp.getName());
+                row.createCell(2).setCellValue(emp.getPosition());
+                row.createCell(3).setCellValue(emp.getPhone());
+                row.createCell(4).setCellValue(emp.getIdCard());
+                row.createCell(5).setCellValue(emp.getBaseSalary());
+                row.createCell(6).setCellValue(emp.getPerformanceSalary());
+                row.createCell(7).setCellValue(emp.getOvertimeSalary());
+                row.createCell(8).setCellValue(emp.getTotalSalary());
+            }
 
-        } catch (IOException e) {
+            try (FileOutputStream out = new FileOutputStream(fileName)) {
+                workbook.write(out);
+            }
+            workbook.close();
+
+            javax.swing.JOptionPane.showMessageDialog(null, "成功生成报表：" + fileName);
+
+        } catch (Exception e) {
             e.printStackTrace();
-            System.err.println("备份失败: " + e.getMessage());
-        }
-    }
-
-    // 使用 NIO 流进行文件清理
-    private static void cleanupOldBackups(Path backupDir) {
-        long sevenDaysAgo = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000);
-
-        try (Stream<Path> files = Files.list(backupDir)) {
-            files.filter(Files::isRegularFile)
-                    .filter(p -> p.toString().endsWith(".zip"))
-                    .forEach(path -> {
-                        try {
-                            long lastModified = Files.getLastModifiedTime(path).toMillis();
-                            if (lastModified < sevenDaysAgo) {
-                                Files.delete(path);
-                                System.out.println("已清理旧备份: " + path.getFileName());
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    });
-        } catch (IOException e) {
-            e.printStackTrace();
+            javax.swing.JOptionPane.showMessageDialog(null, "备份导出失败：" + e.getMessage());
         }
     }
 }

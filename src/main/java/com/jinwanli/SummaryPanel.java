@@ -247,10 +247,7 @@ public class SummaryPanel extends JPanel {
         currentSalary = employees.stream().mapToDouble(Employee::getTotalSalary).sum();
         
         long orderCount = sales.stream().filter(s -> s.getDate().startsWith(datePrefix)).count();
-        List<AttendanceRecord> attendance = DataManager.getInstance().getAttendanceByMonth(year, month.replaceFirst("^0", ""));
-        long abnormalCount = attendance.stream()
-                .filter(a -> "迟到".equals(a.getStatus()) || "早退".equals(a.getStatus()) || "缺勤".equals(a.getStatus()))
-                .count();
+        long abnormalCount = 0;
 
         incomeLabel.setText(String.format("¥ %.2f", currentIncome));
         expenseLabel.setText(String.format("¥ %.2f", currentExpense));
