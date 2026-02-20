@@ -56,6 +56,13 @@ public class DataManager {
         } 
     }
     
+    public void updateEmployee(int index, Employee e) {
+        if(index >= 0 && index < employees.size()) {
+            employees.set(index, e);
+            saveEmployees();
+        }
+    }
+    
     private void saveEmployees() { saveList(employees, "employees.dat"); }
     
     public Employee getEmployeeById(String id) {
@@ -90,6 +97,13 @@ public class DataManager {
             expenseRecords.remove(index); 
             saveExpenses(); 
         } 
+    }
+    
+    public void updateExpenseRecord(int index, ExpenseRecord e) {
+        if(index >= 0 && index < expenseRecords.size()) {
+            expenseRecords.set(index, e);
+            saveExpenses();
+        }
     }
     
     private void saveExpenses() { saveList(expenseRecords, "expenses.dat"); }

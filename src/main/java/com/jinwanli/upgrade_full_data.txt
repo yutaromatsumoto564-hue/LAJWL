@@ -1,156 +1,244 @@
-为了让 PDF 预览功能生效，您必须完成以下 3 个关键步骤。请检查您的代码是否包含这些内容：
+针对你的三大需求：1. 优化界面并支持编辑、2. 取消工号设定、3. 开支增加“投资项目”，下面是完整的代码修改方案。
 
-1. 检查 pom.xml (缺少依赖)
-您上传的 pom.xml 文件中 缺少 pdfbox 依赖。没有这个库，Java 无法生成 PDF。
+一、 支持数据编辑（以开支管理为例）
+目前你的表格通过 isCellEditable(int row, int col) { return false; } 锁死了编辑。为了最安全地修改数据且不破坏现有的序列化逻辑，最佳方案是选中表格行 -> 点击“编辑”按钮 -> 弹窗回显数据进行修改。
 
-请修改 pom.xml，在 <dependencies> 标签内添加以下代码：
+我们需要在 DataManager.java 中增加更新方法，并在对应的 Panel 和 Dialog 中增加编辑逻辑。
 
-XML
-    <dependency>
-        <groupId>org.apache.pdfbox</groupId>
-        <artifactId>pdfbox</artifactId>
-        <version>2.0.29</version>
-    </dependency>
-2. 检查是否创建了 PdfUtils.java
-您的文件列表中似乎没有 PdfUtils.java。这是生成 PDF 的核心工具类。如果没有它，其他面板无法调用打印功能。
+1. 修改 DataManager.java (增加修改支持)
+在 DataManager 中增加对开支、员工等数据的更新方法：
 
-请在 com.jinwanli 包下新建 PdfUtils.java 文件：
+Java
+// 在 DataManager.java 中添加：
+public void updateExpenseRecord(int index, ExpenseRecord e) {
+    if(index >= 0 && index < expenseRecords.size()) {
+        expenseRecords.set(index, e);
+        saveExpenses();
+    }
+}
 
+public void updateEmployee(int index, Employee e) {
+    if(index >= 0 && index < employees.size()) {
+        employees.set(index, e);
+        saveEmployees();
+    }
+}
+二、 开支管理增加“投资”及关联项目
+我们需要在开支记录中加入“项目名称”字段，并在录入时动态支持。
+
+1. 修改 ExpenseRecord.java
+增加 targetProject 字段。
+
+Java
+package com.jinwanli.model;
+import java.io.Serializable;
+
+public class ExpenseRecord implements Serializable {
+    private static final long serialVersionUID = 2L; // 建议升一下版本号
+    private String date;
+    private String category;
+    private double amount;
+    private String usage;
+    private String handler;
+    private String remark;
+    private String targetProject; // 【新增】关联项目
+
+    // 更新构造函数
+    public ExpenseRecord(String date, String category, double amount, String usage, String handler, String remark, String targetProject) {
+        this.date = date;
+        this.category = category;
+        this.amount = amount;
+        this.usage = usage;
+        this.handler = handler;
+        this.remark = remark;
+        this.targetProject = targetProject;
+    }
+
+    // 保留原有 Getter，并新增：
+    public String getTargetProject() { return targetProject; }
+    // ... 其他原有 getter
+    public String getDate() { return date; }
+    public String getCategory() { return category; }
+    public double getAmount() { return amount; }
+    public String getUsage() { return usage; }
+    public String getHandler() { return handler; }
+    public String getRemark() { return remark; }
+}
+2. 修改 ExpenseDialog.java (支持投资项与编辑回显)
 Java
 package com.jinwanli;
 
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.font.PDFont;
-import org.apache.pdfbox.pdmodel.font.PDType0Font;
-
+import com.jinwanli.model.ExpenseRecord;
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Map;
 
-public class PdfUtils {
-    public static void generateAndOpenPdf(String docName, String title, Map<String, String> content, String footer) {
-        try {
-            PDDocument document = new PDDocument();
-            PDPage page = new PDPage();
-            document.addPage(page);
+public class ExpenseDialog extends JDialog {
+    private JComboBox<String> categoryBox;
+    private JTextField amountField;
+    private JTextField usageField;
+    private JTextField handlerField;
+    private JTextField dateField;
+    private JTextField projectField; // 【新增】项目名称
+    private boolean confirmed = false;
 
-            // 尝试加载中文字体（确保您电脑上有这些字体，否则中文会乱码）
-            PDFont font = loadChineseFont(document);
-            if (font == null) {
-                JOptionPane.showMessageDialog(null, "错误：未找到中文字体(SimHei/MsYaHei)，PDF可能无法显示中文。");
-                return;
+    // 【新增】支持传入已有数据进行编辑
+    public ExpenseDialog(JFrame parent, ExpenseRecord existingRecord) {
+        super(parent, existingRecord == null ? "添加支出记录" : "编辑支出记录", true);
+        setLayout(new BorderLayout());
+        setSize(400, 420);
+        setLocationRelativeTo(parent);
+        setResizable(false);
+
+        // ... 前面的 UI 标题代码保持不变 ...
+
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setBackground(UIUtils.COLOR_BG_CARD);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 5, 10, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        
+        // 分类
+        gbc.gridx = 0; gbc.gridy = 0;
+        formPanel.add(new JLabel("分类:"), gbc);
+        categoryBox = UIUtils.createComboBox(new String[]{"原材料采购", "车旅费", "伙食费", "电费", "房租", "设备维护", "项目投资", "其他支出"});
+        gbc.gridx = 1;
+        formPanel.add(categoryBox, gbc);
+
+        // 【新增】项目名称 (当选择项目投资时启用)
+        gbc.gridx = 0; gbc.gridy = 1;
+        formPanel.add(new JLabel("投资项目:"), gbc);
+        projectField = UIUtils.createTextField();
+        projectField.setEnabled(false); // 默认禁用
+        projectField.setToolTipText("仅在选择'项目投资'时可用");
+        gbc.gridx = 1;
+        formPanel.add(projectField, gbc);
+
+        // 联动事件
+        categoryBox.addActionListener(e -> {
+            boolean isInvestment = "项目投资".equals(categoryBox.getSelectedItem());
+            projectField.setEnabled(isInvestment);
+            if (!isInvestment) projectField.setText("");
+        });
+        
+        // 金额、用途、经手人、日期... (原代码，注意 gridy 依次 +1)
+        // ... (省略部分标准表单字段添加代码) ...
+        // ... 金额(gridy=2), 用途(gridy=3), 经手人(gridy=4), 日期(gridy=5)
+        
+        // 如果是编辑模式，回显数据
+        if (existingRecord != null) {
+            categoryBox.setSelectedItem(existingRecord.getCategory());
+            amountField.setText(String.valueOf(existingRecord.getAmount()));
+            usageField.setText(existingRecord.getUsage());
+            handlerField.setText(existingRecord.getHandler());
+            dateField.setText(existingRecord.getDate());
+            if ("项目投资".equals(existingRecord.getCategory())) {
+                projectField.setEnabled(true);
+                projectField.setText(existingRecord.getTargetProject());
             }
-
-            PDPageContentStream contentStream = new PDPageContentStream(document, page);
-            float y = 750;
-            float margin = 50;
-
-            // 绘制标题
-            contentStream.beginText();
-            contentStream.setFont(font, 24);
-            contentStream.newLineAtOffset(margin, y);
-            contentStream.showText(title);
-            contentStream.endText();
-            y -= 40;
-
-            // 绘制内容
-            contentStream.beginText();
-            contentStream.setFont(font, 14);
-            contentStream.setLeading(25f);
-            contentStream.newLineAtOffset(margin, y);
-            
-            for (Map.Entry<String, String> entry : content.entrySet()) {
-                contentStream.showText(entry.getKey() + "    " + entry.getValue());
-                contentStream.newLine();
-                y -= 25;
-            }
-            contentStream.endText();
-
-            // 绘制页脚
-            y -= 50;
-            contentStream.beginText();
-            contentStream.setFont(font, 12);
-            contentStream.newLineAtOffset(margin, y);
-            String[] footerLines = footer.split("\n");
-            for (String line : footerLines) {
-                contentStream.showText(line);
-                contentStream.newLine(); // 注意：PDFBox简单模式下newLine可能需要重新定位Y坐标，这里简化处理
-            }
-            contentStream.endText();
-
-            contentStream.close();
-
-            String fileName = docName + "_" + System.currentTimeMillis() + ".pdf";
-            document.save(fileName);
-            document.close();
-
-            if (Desktop.isDesktopSupported()) {
-                Desktop.getDesktop().open(new File(fileName));
-            } else {
-                JOptionPane.showMessageDialog(null, "PDF已生成: " + fileName);
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(null, "PDF生成失败: " + e.getMessage());
         }
+
+        // ... 底部保存按钮逻辑保持不变 ...
     }
 
-    private static PDFont loadChineseFont(PDDocument doc) {
-        String[] paths = {
-            "C:/Windows/Fonts/simhei.ttf", 
-            "C:/Windows/Fonts/msyh.ttf",
-            "/System/Library/Fonts/PingFang.ttc",
-            "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf"
-        };
-        for (String path : paths) {
-            if (new File(path).exists()) {
-                try { return PDType0Font.load(doc, new File(path)); } catch (IOException e) {}
-            }
+    public ExpenseRecord getData() {
+        if (!confirmed) return null;
+        try {
+            double amount = Double.parseDouble(amountField.getText().trim());
+            return new ExpenseRecord(
+                dateField.getText().trim(),
+                (String) categoryBox.getSelectedItem(),
+                amount,
+                usageField.getText().trim(),
+                handlerField.getText().trim(),
+                "",
+                projectField.getText().trim() // 获取项目
+            );
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "金额输入错误！", "错误", JOptionPane.ERROR_MESSAGE);
+            return null;
         }
-        return null;
     }
 }
-3. 检查 SalesPanel.java 和 AttendancePanel.java
-您上传的 SalesPanel.java 中，createSalesRecordPanel 方法里的 buttonPanel 只添加了“添加”、“编辑”、“删除”按钮，没有添加“预览/打印”按钮，也没有调用 PdfUtils 的代码。
-
-您需要修改 SalesPanel.java，在按钮面板中增加打印按钮：
-
+3. 修改 ExpensePanel.java (加入编辑按钮和项目列)
 Java
-// 在 createSalesRecordPanel 方法的 buttonPanel 部分添加：
+// 在 ExpensePanel.java 中修改表头：
+String[] columnNames = {"日期", "分类", "关联项目", "金额", "用途", "经手人"};
 
-JButton printButton = new JButton("预览单据"); // 新增按钮
-printButton.addActionListener(new ActionListener() {
-    @Override
-    public void actionPerformed(ActionEvent e) {
-        int row = table.getSelectedRow();
-        if (row < 0) {
-            JOptionPane.showMessageDialog(null, "请先选择一条记录");
-            return;
+// 在 buttonPanel 中新增编辑按钮：
+JButton editBtn = UIUtils.createButton("编辑记录");
+editBtn.addActionListener(e -> {
+    int row = table.getSelectedRow();
+    if (row >= 0) {
+        ExpenseRecord existing = DataManager.getInstance().getExpenseRecords().get(row);
+        ExpenseDialog dialog = new ExpenseDialog((JFrame) SwingUtilities.getWindowAncestor(this), existing);
+        dialog.setVisible(true);
+        ExpenseRecord updatedRecord = dialog.getData();
+        if (updatedRecord != null) {
+            DataManager.getInstance().updateExpenseRecord(row, updatedRecord);
+            refreshData(); // 刷新表格
         }
-        
-        // 获取选中行数据
-        String shipper = table.getValueAt(row, 1).toString();
-        String total = table.getValueAt(row, 6).toString();
-        String date = table.getValueAt(row, 7).toString();
-        
-        // 准备打印内容
-        java.util.Map<String, String> content = new java.util.LinkedHashMap<>();
-        content.put("客户名称:", shipper);
-        content.put("交易日期:", date);
-        content.put("合计金额:", "¥ " + total);
-        
-        // 调用工具类
-        PdfUtils.generateAndOpenPdf("Sales", "销售单据预览", content, "谢谢惠顾！");
+    } else {
+        JOptionPane.showMessageDialog(this, "请先选择需要编辑的行", "提示", JOptionPane.WARNING_MESSAGE);
     }
 });
+buttonPanel.add(editBtn); // 加在增加和删除按钮中间
 
-// 别忘了把按钮加到面板上
-buttonPanel.add(printButton);
-请按照上述三点检查并手动修改您的代码，或者确认您是否在正确的目录下运行了之前的自动更新脚本。如果是在 IDE 中操作，修改 pom.xml 后记得刷新 Maven 项目。
+// 修改 refreshData() 填充逻辑：
+private void refreshData() {
+    model.setRowCount(0);
+    List<ExpenseRecord> list = DataManager.getInstance().getExpenseRecords();
+    for (ExpenseRecord r : list) {
+        model.addRow(new Object[]{
+            r.getDate(), 
+            r.getCategory(), 
+            r.getTargetProject() != null ? r.getTargetProject() : "-", // 显示项目
+            String.format("%.2f", r.getAmount()), 
+            r.getUsage(), 
+            r.getHandler()
+        });
+    }
+}
+三、 取消工号设定
+为了保证后端系统依然有唯一标识防止重名报错，我们将 id 改为系统后台自动生成的 UUID 并将其对用户彻底隐藏。
+
+1. 修改 EmployeeDialog.java
+完全删除其中关于 idField（工号）的代码行。
+在 getData() 方法中后台强制生成 ID：
+
+Java
+// 在 EmployeeDialog.java 的 getData() 方法中：
+public Employee getData() {
+    if (!confirmed) return null;
+    try {
+        String name = nameField.getText().trim();
+        // 自动隐藏生成唯一ID，取消工号的外部输入概念
+        String id = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8); 
+        
+        String pos = (String) posBox.getSelectedItem();
+        // ... (其他字段解析不变)
+        return new Employee(id, name, pos, phone, idCard, baseSalary, perfSalary, overtime);
+    } //...
+}
+2. 修改 AttendancePanel.java (隐藏工号列)
+在 AttendancePanel.java 中，有三个地方显示了工号，需要将其剔除：
+
+员工档案表：
+将 String[] cols = {"工号", "姓名", "职位"...} 改为 String[] cols = {"姓名", "职位", "联系电话"...}。
+在 loadData.run() 中，剔除 e.getId()，直接从 e.getName() 开始 addRow。
+
+月考勤表：
+将 columnNames[32] = "工号"; 移除，表格列数变为 32 列，不再展示工号。
+
+月度汇总表：
+将 String[] cols = {"姓名", "工号", "月份"...} 中的 "工号" 删除，并在 refreshSummaryTable 时不将 empId 放入 addRow。
+
+总结建议
+采用这种方案的优势在于：
+
+界面体验跃升：你依然享受目前高颜值的扁平化 Swing UI（UIUtils 配置得很好），但在操作上获得了完整的 CRUD（增删改查）闭环体验。
+
+底层兼容：你的数据存储核心 .dat 序列化机制不需要大改，只要清理一下项目根目录的旧 expenses.dat 等文件，再重新运行即可生效。
+
+彻底弱化“工号”概念：前端再也不会看到工号，无论是录入、考勤还是打印预览，完全以员工的姓名为主导，极大简化了小微企业的管理成本。

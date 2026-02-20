@@ -17,7 +17,6 @@ public class ExpensePanel extends JPanel {
         setBackground(UIUtils.COLOR_BG_MAIN);
         add(UIUtils.createTitlePanel("开支管理"), BorderLayout.NORTH);
 
-        // 查询工具栏
         JPanel queryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
         queryPanel.setBackground(UIUtils.COLOR_BG_CARD);
         queryPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UIUtils.COLOR_BORDER));
@@ -33,8 +32,7 @@ public class ExpensePanel extends JPanel {
         
         add(queryPanel, BorderLayout.NORTH);
 
-        // 表格
-        String[] columnNames = {"日期", "分类", "金额", "用途", "经手人"};
+        String[] columnNames = {"日期", "分类", "关联项目", "金额", "用途", "经手人"};
         model = new DefaultTableModel(columnNames, 0) {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };
@@ -45,24 +43,39 @@ public class ExpensePanel extends JPanel {
         table.setSelectionBackground(UIUtils.COLOR_PRIMARY_LIGHT);
         table.setSelectionForeground(UIUtils.COLOR_PRIMARY);
         
-        // 表头样式
         table.getTableHeader().setFont(UIUtils.FONT_BODY_BOLD);
         table.getTableHeader().setBackground(UIUtils.COLOR_BG_MAIN);
         table.getTableHeader().setForeground(UIUtils.COLOR_TEXT_SECONDARY);
 
-        // 操作按钮
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         buttonPanel.setBackground(UIUtils.COLOR_BG_CARD);
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIUtils.COLOR_BORDER));
         
         JButton addBtn = UIUtils.createButton("添加支出");
         addBtn.addActionListener(e -> {
-            ExpenseDialog dialog = new ExpenseDialog((JFrame) SwingUtilities.getWindowAncestor(this));
+            ExpenseDialog dialog = new ExpenseDialog((JFrame) SwingUtilities.getWindowAncestor(this), null);
             dialog.setVisible(true);
             ExpenseRecord record = dialog.getData();
             if (record != null) {
                 DataManager.getInstance().addExpenseRecord(record);
                 refreshData();
+            }
+        });
+
+        JButton editBtn = UIUtils.createButton("编辑记录");
+        editBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0) {
+                ExpenseRecord existing = DataManager.getInstance().getExpenseRecords().get(row);
+                ExpenseDialog dialog = new ExpenseDialog((JFrame) SwingUtilities.getWindowAncestor(this), existing);
+                dialog.setVisible(true);
+                ExpenseRecord updatedRecord = dialog.getData();
+                if (updatedRecord != null) {
+                    DataManager.getInstance().updateExpenseRecord(row, updatedRecord);
+                    refreshData();
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "请先选择需要编辑的行", "提示", JOptionPane.WARNING_MESSAGE);
             }
         });
 
@@ -80,6 +93,7 @@ public class ExpensePanel extends JPanel {
         });
 
         buttonPanel.add(addBtn);
+        buttonPanel.add(editBtn);
         buttonPanel.add(delBtn);
 
         add(new JScrollPane(table), BorderLayout.CENTER);
@@ -92,7 +106,14 @@ public class ExpensePanel extends JPanel {
         model.setRowCount(0);
         List<ExpenseRecord> list = DataManager.getInstance().getExpenseRecords();
         for (ExpenseRecord r : list) {
-            model.addRow(new Object[]{r.getDate(), r.getCategory(), String.format("%.2f", r.getAmount()), r.getUsage(), r.getHandler()});
+            model.addRow(new Object[]{
+                r.getDate(), 
+                r.getCategory(), 
+                r.getTargetProject() != null ? r.getTargetProject() : "-", 
+                String.format("%.2f", r.getAmount()), 
+                r.getUsage(), 
+                r.getHandler()
+            });
         }
     }
 }

@@ -18,11 +18,10 @@ public class EmployeeDialog extends JDialog {
     public EmployeeDialog(JFrame parent) {
         super(parent, "员工信息", true);
         setLayout(new BorderLayout());
-        setSize(400, 420);
+        setSize(400, 380);
         setLocationRelativeTo(parent);
         setResizable(false);
 
-        // 标题
         JPanel titlePanel = new JPanel();
         titlePanel.setBackground(UIUtils.COLOR_PRIMARY);
         JLabel titleLabel = new JLabel("录入员工信息");
@@ -30,7 +29,6 @@ public class EmployeeDialog extends JDialog {
         titleLabel.setForeground(Color.WHITE);
         titlePanel.add(titleLabel);
         
-        // 表单
         JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setBackground(UIUtils.COLOR_BG_CARD);
         formPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
@@ -39,66 +37,51 @@ public class EmployeeDialog extends JDialog {
         gbc.insets = new Insets(8, 5, 8, 5);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         
-        // 姓名
         gbc.gridx = 0; gbc.gridy = 0;
         formPanel.add(new JLabel("姓名:"), gbc);
         nameField = UIUtils.createTextField();
         gbc.gridx = 1;
         formPanel.add(nameField, gbc);
         
-        // 工号
         gbc.gridx = 0; gbc.gridy = 1;
-        formPanel.add(new JLabel("工号(可选):"), gbc);
-        JTextField idField = UIUtils.createTextField();
-        gbc.gridx = 1;
-        formPanel.add(idField, gbc);
-        
-        // 职位
-        gbc.gridx = 0; gbc.gridy = 2;
         formPanel.add(new JLabel("职位:"), gbc);
         posBox = UIUtils.createComboBox(new String[]{"员工", "经理", "主管", "临时工"});
         gbc.gridx = 1;
         formPanel.add(posBox, gbc);
         
-        // 电话
-        gbc.gridx = 0; gbc.gridy = 3;
+        gbc.gridx = 0; gbc.gridy = 2;
         formPanel.add(new JLabel("联系电话:"), gbc);
         phoneField = UIUtils.createTextField();
         gbc.gridx = 1;
         formPanel.add(phoneField, gbc);
         
-        // 身份证
-        gbc.gridx = 0; gbc.gridy = 4;
+        gbc.gridx = 0; gbc.gridy = 3;
         formPanel.add(new JLabel("身份证号:"), gbc);
         idCardField = UIUtils.createTextField();
         gbc.gridx = 1;
         formPanel.add(idCardField, gbc);
         
-        // 基本工资
-        gbc.gridx = 0; gbc.gridy = 5;
+        gbc.gridx = 0; gbc.gridy = 4;
         formPanel.add(new JLabel("基本工资(元):"), gbc);
         baseSalaryField = UIUtils.createTextField();
         baseSalaryField.setText("0");
         gbc.gridx = 1;
         formPanel.add(baseSalaryField, gbc);
         
-        // 绩效工资
-        gbc.gridx = 0; gbc.gridy = 6;
+        gbc.gridx = 0; gbc.gridy = 5;
         formPanel.add(new JLabel("绩效工资(元):"), gbc);
         perfSalaryField = UIUtils.createTextField();
         perfSalaryField.setText("0");
         gbc.gridx = 1;
         formPanel.add(perfSalaryField, gbc);
         
-        // 加班补贴
-        gbc.gridx = 0; gbc.gridy = 7;
+        gbc.gridx = 0; gbc.gridy = 6;
         formPanel.add(new JLabel("加班补贴(元):"), gbc);
         overtimeField = UIUtils.createTextField();
         overtimeField.setText("0");
         gbc.gridx = 1;
         formPanel.add(overtimeField, gbc);
         
-        // 按钮
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 15));
         btnPanel.setBackground(UIUtils.COLOR_BG_CARD);
         btnPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, UIUtils.COLOR_BORDER));
@@ -124,21 +107,13 @@ public class EmployeeDialog extends JDialog {
         add(titlePanel, BorderLayout.NORTH);
         add(formPanel, BorderLayout.CENTER);
         add(btnPanel, BorderLayout.SOUTH);
-        
-        // 保存ID字段引用
-        this.idFieldRef = idField;
     }
-    
-    private JTextField idFieldRef;
     
     public Employee getData() {
         if (!confirmed) return null;
         try {
             String name = nameField.getText().trim();
-            String id = idFieldRef.getText().trim();
-            if (id.isEmpty()) {
-                id = "E" + String.format("%05d", System.currentTimeMillis() % 100000);
-            }
+            String id = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
             String pos = (String) posBox.getSelectedItem();
             String phone = phoneField.getText().trim();
             String idCard = idCardField.getText().trim();
