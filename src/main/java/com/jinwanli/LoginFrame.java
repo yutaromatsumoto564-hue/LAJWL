@@ -81,5 +81,6 @@ public class LoginFrame extends JFrame {
         mainPanel.add(btnPanel, BorderLayout.SOUTH);
 
         add(mainPanel);
+        setVisible(true);
     }
 }
