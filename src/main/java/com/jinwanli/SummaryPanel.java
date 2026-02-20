@@ -23,6 +23,7 @@ public class SummaryPanel extends JPanel {
     private JLabel abnormalLabel;
     
     private JPanel chartPanel;
+    private java.util.List<BarRegion> clickableBars = new java.util.ArrayList<>();
 
     public SummaryPanel() {
         setLayout(new BorderLayout());
@@ -78,7 +79,6 @@ public class SummaryPanel extends JPanel {
         contentPanel.add(cardsPanel);
         contentPanel.add(Box.createVerticalStrut(24));
 
-        // 图表区域
         chartPanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -93,6 +93,18 @@ public class SummaryPanel extends JPanel {
         ));
         chartPanel.setPreferredSize(new Dimension(0, 280));
         chartPanel.setMaximumSize(new Dimension(2000, 280));
+        chartPanel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        chartPanel.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                for (BarRegion bar : clickableBars) {
+                    if (bar.bounds.contains(e.getPoint())) {
+                        showDetailDialog(bar.month, bar.type);
+                        break;
+                    }
+                }
+            }
+        });
         
         JLabel chartTitle = new JLabel("收支可视化分析");
         chartTitle.setFont(UIUtils.FONT_SUBHEADING);
@@ -269,6 +281,8 @@ public class SummaryPanel extends JPanel {
         Graphics2D g2d = (Graphics2D) g;
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         
+        clickableBars.clear();
+        
         if (currentIncome == 0 && currentExpense == 0 && currentSalary == 0) {
             g2d.setColor(UIUtils.COLOR_TEXT_SECONDARY);
             g2d.setFont(UIUtils.FONT_BODY);
@@ -287,31 +301,32 @@ public class SummaryPanel extends JPanel {
         int baseline = h - 40;
         int maxHeight = h - 80;
         
-        // 绘制柱状图
-        drawBar(g2d, startX, baseline, maxHeight, barWidth, currentIncome, max, UIUtils.COLOR_SUCCESS, "收入");
-        drawBar(g2d, startX + barWidth + spacing, baseline, maxHeight, barWidth, currentExpense, max, UIUtils.COLOR_DANGER, "支出");
-        drawBar(g2d, startX + 2 * (barWidth + spacing), baseline, maxHeight, barWidth, currentSalary, max, UIUtils.COLOR_WARNING, "薪资");
+        String year = (String) yearBox.getSelectedItem();
+        String month = (String) monthBox.getSelectedItem();
+        String currentMonth = year + "-" + month;
         
-        // 绘制图例
+        drawBar(g2d, startX, baseline, maxHeight, barWidth, currentIncome, max, UIUtils.COLOR_SUCCESS, "收入", currentMonth, "INCOME");
+        drawBar(g2d, startX + barWidth + spacing, baseline, maxHeight, barWidth, currentExpense, max, UIUtils.COLOR_DANGER, "支出", currentMonth, "EXPENSE");
+        drawBar(g2d, startX + 2 * (barWidth + spacing), baseline, maxHeight, barWidth, currentSalary, max, UIUtils.COLOR_WARNING, "薪资", currentMonth, "SALARY");
+        
         drawLegend(g2d, 20, 20);
     }
     
-    private void drawBar(Graphics2D g, int x, int y, int maxH, int w, double val, double maxVal, Color c, String label) {
+    private void drawBar(Graphics2D g, int x, int y, int maxH, int w, double val, double maxVal, Color c, String label, String month, String type) {
         int h = (int) ((val / maxVal) * maxH);
-        h = Math.max(h, 10); // 最小高度
+        h = Math.max(h, 10);
         
-        // 柱体（带圆角）
         g.setColor(c);
         g.fillRoundRect(x, y - h, w, h, UIUtils.RADIUS_SMALL, UIUtils.RADIUS_SMALL);
         
-        // 标签
+        clickableBars.add(new BarRegion(new Rectangle(x, y - h, w, h), month, type));
+        
         g.setColor(UIUtils.COLOR_TEXT_SECONDARY);
         g.setFont(UIUtils.FONT_SMALL);
         FontMetrics fm = g.getFontMetrics();
         int labelW = fm.stringWidth(label);
         g.drawString(label, x + (w - labelW) / 2, y + 20);
         
-        // 数值
         String valStr = String.format("%.0f", val);
         g.setColor(UIUtils.COLOR_TEXT_PRIMARY);
         g.setFont(UIUtils.FONT_BODY_BOLD);
@@ -342,5 +357,72 @@ public class SummaryPanel extends JPanel {
         g.fillRect(x, y, 12, 12);
         g.setColor(UIUtils.COLOR_TEXT_SECONDARY);
         g.drawString("薪资", x + 18, y + 10);
+    }
+
+    private class BarRegion {
+        Rectangle bounds;
+        String month;
+        String type;
+
+        public BarRegion(Rectangle bounds, String month, String type) {
+            this.bounds = bounds;
+            this.month = month;
+            this.type = type;
+        }
+    }
+
+    private void showDetailDialog(String month, String type) {
+        String title = month + (type.equals("INCOME") ? " 收入明细" : " 支出明细");
+        JDialog dialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), title, true);
+        dialog.setSize(700, 450);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout());
+
+        String[] cols;
+        javax.swing.table.DefaultTableModel model;
+
+        if (type.equals("INCOME")) {
+            cols = new String[]{"日期", "客户/收货方", "商品", "单价(元)", "数量", "总金额(元)", "经手人"};
+            model = new javax.swing.table.DefaultTableModel(cols, 0) {
+                @Override public boolean isCellEditable(int r, int c) { return false; }
+            };
+            for (com.jinwanli.model.SalesRecord s : DataManager.getInstance().getSalesRecords()) {
+                if (s.getDate().startsWith(month)) {
+                    model.addRow(new Object[]{
+                        s.getDate(), s.getShipperName(), s.getProductName(), 
+                        String.format("%.2f", s.getPricePerJin()), s.getBasketCount(), 
+                        String.format("%.2f", s.getTotalAmount()), s.getHandler()
+                    });
+                }
+            }
+        } else {
+            cols = new String[]{"日期", "分类", "投资项目", "金额(元)", "用途", "经手人"};
+            model = new javax.swing.table.DefaultTableModel(cols, 0) {
+                @Override public boolean isCellEditable(int r, int c) { return false; }
+            };
+            for (com.jinwanli.model.ExpenseRecord e : DataManager.getInstance().getExpenseRecords()) {
+                if (e.getDate().startsWith(month)) {
+                    model.addRow(new Object[]{
+                        e.getDate(), e.getCategory(), 
+                        (e.getTargetProject() == null || e.getTargetProject().isEmpty()) ? "-" : e.getTargetProject(),
+                        String.format("%.2f", e.getAmount()), e.getUsage(), e.getHandler()
+                    });
+                }
+            }
+        }
+
+        JTable table = new JTable(model);
+        table.setRowHeight(30);
+        table.setFont(UIUtils.FONT_NORMAL);
+        
+        dialog.add(new JScrollPane(table), BorderLayout.CENTER);
+        
+        JPanel btnPanel = new JPanel();
+        JButton closeBtn = UIUtils.createSecondaryButton("关闭");
+        closeBtn.addActionListener(e -> dialog.setVisible(false));
+        btnPanel.add(closeBtn);
+        dialog.add(btnPanel, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
     }
 }
