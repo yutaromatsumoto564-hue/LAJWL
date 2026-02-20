@@ -99,7 +99,7 @@ public class AttendanceDialog extends JDialog {
             Employee emp = employeeList.get(selectedIndex);
 
             double workHours = Double.parseDouble(workHoursField.getText().trim());
-            return new AttendanceRecord(emp.getId(), emp.getName(), dateField.getText().trim(), workHours);
+            return new AttendanceRecord(emp.getId(), dateField.getText().trim(), workHours);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "输入格式错误！", "错误", JOptionPane.ERROR_MESSAGE);
             return null;

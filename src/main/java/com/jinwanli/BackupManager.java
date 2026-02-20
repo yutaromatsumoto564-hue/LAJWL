@@ -67,7 +67,8 @@ public class BackupManager {
             for (AttendanceRecord record : attendance) {
                 Row row = attendanceSheet.createRow(r++);
                 row.createCell(0).setCellValue(record.getEmployeeId());
-                row.createCell(1).setCellValue(record.getEmployeeName());
+                Employee emp = DataManager.getInstance().getEmployeeById(record.getEmployeeId());
+                row.createCell(1).setCellValue(emp != null ? emp.getName() : "");
                 row.createCell(2).setCellValue(record.getDate());
                 row.createCell(3).setCellValue(record.getWorkHours());
             }

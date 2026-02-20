@@ -319,17 +319,27 @@ public class AttendanceImporter {
                 }
                 
                 java.util.List<Integer> punches = new java.util.ArrayList<>();
+                StringBuilder punchTextBuilder = new StringBuilder();
+                
                 for (int c = 4; c <= 9; c++) {
                     Cell timeCell = row.getCell(c);
                     if (timeCell != null) {
                         String timeVal = getCellValue(timeCell).trim();
                         if (timeVal.matches("^\\d{2}:\\d{2}$")) {
+                            punchTextBuilder.append(timeVal).append("  ");
                             String[] parts = timeVal.split(":");
                             int minutes = Integer.parseInt(parts[0]) * 60 + Integer.parseInt(parts[1]);
                             punches.add(minutes);
                         }
                     }
                 }
+                
+                String status = "";
+                Cell statusCell = row.getCell(10);
+                if (statusCell != null) status = getCellValue(statusCell).trim();
+                
+                boolean isAbnormal = !status.isEmpty() && !status.equals("正常") && !status.equals("休息");
+                String punchDetails = status + (punches.isEmpty() ? " (无打卡记录)" : " | 实际打卡: " + punchTextBuilder.toString().trim());
                 
                 double hours = 0.0;
                 if (punches.size() >= 2) {
@@ -338,8 +348,8 @@ public class AttendanceImporter {
                     hours = Math.round(((max - min) / 60.0) * 10.0) / 10.0;
                 }
                 
-                if (hours > 0) {
-                    AttendanceRecord record = new AttendanceRecord(empId, formattedDate, hours);
+                if (hours > 0 || isAbnormal) {
+                    AttendanceRecord record = new AttendanceRecord(empId, formattedDate, hours, isAbnormal, punchDetails);
                     DataManager.getInstance().addAttendanceRecord(record);
                 }
             }

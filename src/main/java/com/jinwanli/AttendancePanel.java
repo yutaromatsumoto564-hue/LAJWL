@@ -116,7 +116,7 @@ public class AttendancePanel extends JPanel {
                 String valStr = aValue.toString().trim();
                 double hours = valStr.isEmpty() ? 0 : Double.parseDouble(valStr);
 
-                AttendanceRecord record = new AttendanceRecord(emp.getId(), empName, date, hours);
+                AttendanceRecord record = new AttendanceRecord(emp.getId(), date, hours);
                 DataManager.getInstance().addAttendanceRecord(record);
                 
                 SwingUtilities.invokeLater(() -> refreshMonthlyTable());
@@ -133,6 +133,46 @@ public class AttendancePanel extends JPanel {
             monthlyTable.getColumnModel().getColumn(i).setPreferredWidth(25);
         }
         monthlyTable.getColumnModel().getColumn(32).setPreferredWidth(60);
+
+        monthlyTable.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                java.awt.Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                
+                c.setForeground(UIUtils.COLOR_TEXT_PRIMARY);
+                ((javax.swing.JComponent) c).setToolTipText(null);
+
+                if (column >= 1 && column <= 31) {
+                    String empName = (String) table.getValueAt(row, 0);
+                    Employee emp = DataManager.getInstance().getEmployeeByName(empName);
+                    
+                    if (emp != null) {
+                        String year = (String) yearBox.getSelectedItem();
+                        String month = String.format("%02d", Integer.parseInt((String) monthBox.getSelectedItem()));
+                        String date = year + "-" + month + "-" + String.format("%02d", column);
+                        
+                        AttendanceRecord record = DataManager.getInstance().getAttendanceRecords().stream()
+                                .filter(r -> r.getEmployeeId().equals(emp.getId()) && r.getDate().equals(date))
+                                .findFirst().orElse(null);
+                                
+                        if (record != null && record.isAbnormal()) {
+                            c.setForeground(UIUtils.COLOR_DANGER);
+                            ((javax.swing.JComponent) c).setToolTipText(record.getPunchDetails());
+                            
+                            if (value == null || value.toString().isEmpty()) {
+                                setText("缺卡");
+                            }
+                        }
+                    }
+                }
+                
+                if (isSelected) {
+                    c.setForeground(table.getSelectionForeground());
+                }
+                
+                return c;
+            }
+        });
 
         JScrollPane scrollPane = new JScrollPane(monthlyTable);
         panel.add(scrollPane, BorderLayout.CENTER);
