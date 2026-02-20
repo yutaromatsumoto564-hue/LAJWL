@@ -372,9 +372,13 @@ public class SummaryPanel extends JPanel {
     }
 
     private void showDetailDialog(String month, String type) {
-        String title = month + (type.equals("INCOME") ? " 收入明细" : " 支出明细");
+        String title;
+        if (type.equals("INCOME")) title = month + " 收入明细";
+        else if (type.equals("EXPENSE")) title = month + " 杂项支出明细";
+        else title = month + " 预计薪资成本明细";
+
         JDialog dialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), title, true);
-        dialog.setSize(700, 450);
+        dialog.setSize(750, 450);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout());
 
@@ -395,7 +399,7 @@ public class SummaryPanel extends JPanel {
                     });
                 }
             }
-        } else {
+        } else if (type.equals("EXPENSE")) {
             cols = new String[]{"日期", "分类", "投资项目", "金额(元)", "用途", "经手人"};
             model = new javax.swing.table.DefaultTableModel(cols, 0) {
                 @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -408,6 +412,22 @@ public class SummaryPanel extends JPanel {
                         String.format("%.2f", e.getAmount()), e.getUsage(), e.getHandler()
                     });
                 }
+            }
+        } else {
+            cols = new String[]{"姓名", "职位", "联系电话", "基本工资(元)", "绩效(元)", "加班补贴(元)", "预计总薪资(元)"};
+            model = new javax.swing.table.DefaultTableModel(cols, 0) {
+                @Override public boolean isCellEditable(int r, int c) { return false; }
+            };
+            for (com.jinwanli.model.Employee emp : DataManager.getInstance().getEmployees()) {
+                model.addRow(new Object[]{
+                    emp.getName(), 
+                    emp.getPosition(), 
+                    emp.getPhone(),
+                    String.format("%.2f", emp.getBaseSalary()), 
+                    String.format("%.2f", emp.getPerformanceSalary()), 
+                    String.format("%.2f", emp.getOvertimeSalary()), 
+                    String.format("%.2f", emp.getTotalSalary())
+                });
             }
         }
 
