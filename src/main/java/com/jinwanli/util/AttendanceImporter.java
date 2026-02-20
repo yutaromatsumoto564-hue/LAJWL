@@ -342,11 +342,12 @@ public class AttendanceImporter {
                 
                 if (hours > 0 || isAbnormal) {
                     String empId = matchEmployeeId(name, employees);
+                    
                     if (empId == null) {
                         empId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
                         Employee newEmp = new Employee(empId, name, "员工", "-", "-", 0.0, 0.0, 0.0);
-                        DataManager.getInstance().addEmployee(newEmp);
-                        employees.add(newEmp);
+                        
+                        com.jinwanli.DataManager.getInstance().addEmployee(newEmp);
                     }
                     
                     AttendanceRecord record = new AttendanceRecord(empId, formattedDate, hours, isAbnormal, punchDetails);
