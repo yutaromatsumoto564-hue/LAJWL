@@ -13,7 +13,7 @@ public class SalesDialog extends JDialog {
     public SalesDialog(JFrame parent) {
         super(parent, "新增销售记录", true);
         setLayout(new BorderLayout());
-        setSize(450, 450);
+        setSize(450, 550);
         setLocationRelativeTo(parent);
         setResizable(false);
 
@@ -29,7 +29,7 @@ public class SalesDialog extends JDialog {
         formPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
         
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 5, 10, 5);
+        gbc.insets = new Insets(12, 5, 12, 5);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         int row = 0;

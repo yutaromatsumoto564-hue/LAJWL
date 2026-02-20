@@ -12,7 +12,7 @@ public class EmployeeDialog extends JDialog {
     public EmployeeDialog(JFrame parent) {
         super(parent, "员工信息", true);
         setLayout(new BorderLayout());
-        setSize(450, 480);
+        setSize(450, 600);
         setLocationRelativeTo(parent);
         setResizable(false);
 
@@ -28,7 +28,7 @@ public class EmployeeDialog extends JDialog {
         formPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
         
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 5, 8, 5);
+        gbc.insets = new Insets(12, 5, 12, 5);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         
         int row = 0;
