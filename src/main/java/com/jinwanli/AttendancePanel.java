@@ -207,7 +207,11 @@ public class AttendancePanel extends JPanel {
                     .filter(r -> r.getEmployeeId().equals(emp.getId()))
                     .collect(Collectors.toList());
 
-            if (myRecords.isEmpty()) {
+            boolean hasValidRecord = myRecords.stream().anyMatch(r -> 
+                r.getWorkHours() > 0 || (r.getPunchDetails() != null && !r.getPunchDetails().contains("(无打卡记录)"))
+            );
+
+            if (!hasValidRecord) {
                 continue;
             }
 

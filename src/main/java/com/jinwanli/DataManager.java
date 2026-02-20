@@ -29,6 +29,14 @@ public class DataManager {
         attendanceRecords = loadList("attendance.dat");
         monthlyAttendance = loadMonthlyAttendance();
 
+        Set<String> seenEmpNames = new HashSet<>();
+        boolean cleanEmp = employees.removeIf(e -> !seenEmpNames.add(e.getName()));
+        if (cleanEmp) saveEmployees();
+
+        Set<String> seenAtt = new HashSet<>();
+        boolean cleanAtt = attendanceRecords.removeIf(r -> !seenAtt.add(r.getEmployeeId() + "_" + r.getDate()));
+        if (cleanAtt) saveAttendance();
+
         if (employees.isEmpty()) {
             employees.add(new Employee("001", "张三", "经理", "13800138000", "110101199001011234", 8000, 2000, 500));
             employees.add(new Employee("002", "李四", "员工", "13900139000", "110101199202025678", 5000, 1000, 200));
