@@ -34,7 +34,31 @@ public class ExpensePanel extends JPanel {
 
         String[] columnNames = {"日期", "分类", "关联项目", "金额", "用途", "经手人"};
         model = new DefaultTableModel(columnNames, 0) {
-            @Override public boolean isCellEditable(int row, int col) { return false; }
+            @Override 
+            public boolean isCellEditable(int row, int col) { 
+                return true;
+            }
+            
+            @Override
+            public void setValueAt(Object aValue, int row, int column) {
+                String newValue = aValue.toString().trim();
+                ExpenseRecord record = DataManager.getInstance().getExpenseRecords().get(row);
+                
+                try {
+                    switch (column) {
+                        case 0: record.setDate(newValue); break;
+                        case 1: record.setCategory(newValue); break;
+                        case 2: record.setTargetProject(newValue.equals("-") ? "" : newValue); break;
+                        case 3: record.setAmount(Double.parseDouble(newValue)); break;
+                        case 4: record.setUsage(newValue); break;
+                        case 5: record.setHandler(newValue); break;
+                    }
+                    DataManager.getInstance().updateExpenseRecord(row, record);
+                    super.setValueAt(aValue, row, column);
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(null, "金额必须是有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
+                }
+            }
         };
         
         table = new JTable(model);
@@ -62,23 +86,6 @@ public class ExpensePanel extends JPanel {
             }
         });
 
-        JButton editBtn = UIUtils.createButton("编辑记录");
-        editBtn.addActionListener(e -> {
-            int row = table.getSelectedRow();
-            if (row >= 0) {
-                ExpenseRecord existing = DataManager.getInstance().getExpenseRecords().get(row);
-                ExpenseDialog dialog = new ExpenseDialog((JFrame) SwingUtilities.getWindowAncestor(this), existing);
-                dialog.setVisible(true);
-                ExpenseRecord updatedRecord = dialog.getData();
-                if (updatedRecord != null) {
-                    DataManager.getInstance().updateExpenseRecord(row, updatedRecord);
-                    refreshData();
-                }
-            } else {
-                JOptionPane.showMessageDialog(this, "请先选择需要编辑的行", "提示", JOptionPane.WARNING_MESSAGE);
-            }
-        });
-
         JButton delBtn = UIUtils.createDangerButton("删除支出");
         delBtn.addActionListener(e -> {
             int row = table.getSelectedRow();
@@ -93,7 +100,6 @@ public class ExpensePanel extends JPanel {
         });
 
         buttonPanel.add(addBtn);
-        buttonPanel.add(editBtn);
         buttonPanel.add(delBtn);
 
         add(new JScrollPane(table), BorderLayout.CENTER);

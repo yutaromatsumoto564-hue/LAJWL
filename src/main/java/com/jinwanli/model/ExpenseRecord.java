@@ -29,4 +29,12 @@ public class ExpenseRecord implements Serializable {
     public String getHandler() { return handler; }
     public String getRemark() { return remark; }
     public String getTargetProject() { return targetProject; }
+
+    public void setDate(String date) { this.date = date; }
+    public void setCategory(String category) { this.category = category; }
+    public void setAmount(double amount) { this.amount = amount; }
+    public void setUsage(String usage) { this.usage = usage; }
+    public void setHandler(String handler) { this.handler = handler; }
+    public void setRemark(String remark) { this.remark = remark; }
+    public void setTargetProject(String targetProject) { this.targetProject = targetProject; }
 }

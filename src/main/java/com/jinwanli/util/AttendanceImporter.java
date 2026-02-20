@@ -1,5 +1,6 @@
 package com.jinwanli.util;
 
+import com.jinwanli.DataManager;
 import com.jinwanli.model.AttendanceRecord;
 import com.jinwanli.model.Employee;
 import org.apache.poi.ss.usermodel.*;
@@ -271,6 +272,49 @@ public class AttendanceImporter {
         
         public ImportResult() {
             this.errors = new ArrayList<>();
+        }
+    }
+
+    public static void importDailyAttendance(String filePath, String yearStr, String monthStr) throws Exception {
+        try (FileInputStream fis = new FileInputStream(filePath);
+             Workbook workbook = new XSSFWorkbook(fis)) {
+            
+            Sheet sheet = workbook.getSheetAt(0);
+            List<Employee> employees = DataManager.getInstance().getEmployees();
+            
+            String monthFormatted = String.format("%02d", Integer.parseInt(monthStr));
+
+            for (int rowNum = 0; rowNum <= sheet.getLastRowNum(); rowNum++) {
+                Row row = sheet.getRow(rowNum);
+                if (row == null) continue;
+                
+                Cell nameCell = row.getCell(0);
+                if (nameCell == null) continue;
+                String name = getCellValue(nameCell).trim();
+                if (name.isEmpty() || name.equals("姓名") || name.equals("基本信息")) continue;
+                
+                String empId = matchEmployeeId(name, employees);
+                if (empId == null) continue;
+
+                int startCol = 17; 
+                for (int day = 1; day <= 31; day++) {
+                    Cell dayCell = row.getCell(startCol + day - 1);
+                    if (dayCell != null) {
+                        String cellVal = getCellValue(dayCell).trim();
+                        try {
+                            if (!cellVal.isEmpty() && !cellVal.equals("-")) {
+                                String numStr = cellVal.replaceAll("[^0-9.]", ""); 
+                                if (!numStr.isEmpty()) {
+                                    double hours = Double.parseDouble(numStr);
+                                    String date = yearStr + "-" + monthFormatted + "-" + String.format("%02d", day);
+                                    AttendanceRecord record = new AttendanceRecord(empId, date, hours);
+                                    DataManager.getInstance().addAttendanceRecord(record);
+                                }
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                }
+            }
         }
     }
 }

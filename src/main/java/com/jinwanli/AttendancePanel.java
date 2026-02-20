@@ -55,6 +55,25 @@ public class AttendancePanel extends JPanel {
         queryBtn.addActionListener(e -> refreshMonthlyTable());
         queryPanel.add(queryBtn);
 
+        JButton importBtn = UIUtils.createButton("导入考勤(Excel)");
+        importBtn.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser();
+            if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                try {
+                    com.jinwanli.util.AttendanceImporter.importDailyAttendance(
+                        chooser.getSelectedFile().getAbsolutePath(),
+                        (String) yearBox.getSelectedItem(),
+                        (String) monthBox.getSelectedItem()
+                    );
+                    refreshMonthlyTable();
+                    JOptionPane.showMessageDialog(this, "考勤导入成功！");
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "导入失败: " + ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        queryPanel.add(importBtn);
+
         JButton addBtn = UIUtils.createButton("录入考勤");
         addBtn.addActionListener(e -> {
             AttendanceDialog dialog = new AttendanceDialog((JFrame) SwingUtilities.getWindowAncestor(this));
@@ -78,7 +97,30 @@ public class AttendancePanel extends JPanel {
 
         monthlyModel = new DefaultTableModel(columnNames, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+            public boolean isCellEditable(int row, int column) { 
+                return column >= 1 && column <= 31;
+            }
+            
+            @Override
+            public void setValueAt(Object aValue, int row, int column) {
+                super.setValueAt(aValue, row, column);
+                
+                String empName = (String) getValueAt(row, 0);
+                Employee emp = DataManager.getInstance().getEmployeeByName(empName);
+                if (emp == null) return;
+
+                String year = (String) yearBox.getSelectedItem();
+                String month = String.format("%02d", Integer.parseInt((String) monthBox.getSelectedItem()));
+                String date = year + "-" + month + "-" + String.format("%02d", column);
+                
+                String valStr = aValue.toString().trim();
+                double hours = valStr.isEmpty() ? 0 : Double.parseDouble(valStr);
+
+                AttendanceRecord record = new AttendanceRecord(emp.getId(), empName, date, hours);
+                DataManager.getInstance().addAttendanceRecord(record);
+                
+                SwingUtilities.invokeLater(() -> refreshMonthlyTable());
+            }
         };
 
         monthlyTable = new JTable(monthlyModel);
@@ -158,7 +200,29 @@ public class AttendancePanel extends JPanel {
 
         String[] cols = {"姓名", "职位", "联系电话", "身份证号", "基本工资(元)"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
-            @Override public boolean isCellEditable(int row, int col) { return false; }
+            @Override 
+            public boolean isCellEditable(int row, int col) { 
+                return col > 0;
+            }
+            
+            @Override
+            public void setValueAt(Object aValue, int row, int col) {
+                String newValue = aValue.toString().trim();
+                Employee emp = DataManager.getInstance().getEmployees().get(row);
+                
+                try {
+                    switch (col) {
+                        case 1: emp.setPosition(newValue); break;
+                        case 2: emp.setPhone(newValue); break;
+                        case 3: emp.setIdCard(newValue); break;
+                        case 4: emp.setBaseSalary(Double.parseDouble(newValue)); break;
+                    }
+                    DataManager.getInstance().updateEmployee(row, emp);
+                    super.setValueAt(aValue, row, col);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(null, "输入格式错误！", "错误", JOptionPane.ERROR_MESSAGE);
+                }
+            }
         };
         JTable table = new JTable(model);
         table.setRowHeight(30);

@@ -40,6 +40,15 @@ public class Employee implements Serializable {
     public double getPerformanceSalary() { return performanceSalary; }
     public double getOvertimeSalary() { return overtimeSalary; }
     public String getStatus() { return status; }
+
+    public void setId(String id) { this.id = id; }
+    public void setName(String name) { this.name = name; }
+    public void setPosition(String position) { this.position = position; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public void setIdCard(String idCard) { this.idCard = idCard; }
+    public void setBaseSalary(double baseSalary) { this.baseSalary = baseSalary; }
+    public void setPerformanceSalary(double performanceSalary) { this.performanceSalary = performanceSalary; }
+    public void setOvertimeSalary(double overtimeSalary) { this.overtimeSalary = overtimeSalary; }
     public void setStatus(String status) { this.status = status; }
 
     @Override

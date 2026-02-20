@@ -16,10 +16,22 @@ public class AttendanceRecord implements Serializable {
         this.workHours = workHours;
     }
 
+    public AttendanceRecord(String employeeId, String date, double workHours) {
+        this.employeeId = employeeId;
+        this.employeeName = "";
+        this.date = date;
+        this.workHours = workHours;
+    }
+
     public String getEmployeeId() { return employeeId; }
     public String getEmployeeName() { return employeeName; }
     public String getDate() { return date; }
     public double getWorkHours() { return workHours; }
+
+    public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
+    public void setEmployeeName(String employeeName) { this.employeeName = employeeName; }
+    public void setDate(String date) { this.date = date; }
+    public void setWorkHours(double workHours) { this.workHours = workHours; }
 
     public int getDay() {
         try {
