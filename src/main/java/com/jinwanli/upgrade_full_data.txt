@@ -1,143 +1,197 @@
-一、 解决图标方框、排版错乱与登录界面问题（删除冗余 UI）
-1. 剥离 LoginFrame.java 的花哨代码
+一、 删除“首页”菜单 (修改 MainFrame.java)
+我们需要把左侧的“首页”按钮剥离，并让系统登录后直接进入“经营总览”或“员工考勤”。
 
-删除 createSplashPanel() 及其相关的开场动画逻辑、Timer 延迟切换代码。
+打开 MainFrame.java，进行以下删除和修改：
 
-删除 createLoginPanel() 中的 paintComponent 重写（去掉渐变背景）。
+删除按钮声明：找到 private JButton homeBtn; 并删除它。
 
-替换图标为文字：
-找到 JLabel userIcon = new JLabel("👤"); 和 JLabel pwdIcon = new JLabel("🔒");，将其直接改为：
+删除面板添加：找到 contentPanel.add(createHomePanel(), "HOME"); 并删除。
 
-Java
-JLabel userIcon = new JLabel("账号:");
-JLabel pwdIcon = new JLabel("密码:");
-建议：把复杂的 BoxLayout 和 BorderLayout 嵌套全删掉，直接用最简单的绝对布局（setLayout(null)）或标准的 GridLayout(2, 2) 来放账号、密码的 Label 和输入框。
+更改默认页：找到 private String currentPage = "HOME"; 改为 private String currentPage = "SUMMARY";。
 
-2. 剥离 UIUtils.java 中的重绘代码
+删除菜单项：在 createNavPanel() 方法中，删除 homeBtn = createNavButton("H", "首页", "HOME"), 这一行。
 
-删除或简化 createButton()、createDangerButton() 等方法中所有重写 paintComponent 的代码。原生的 new JButton("文本") 最稳定，不会因为圆角绘制导致点击事件漂移或排版错乱（这可能也是你“编辑功能没生效”的原因之一，因为自定义按钮的点击穿透或焦点丢失）。
+删除无用方法：把整个 createHomePanel() 方法全部删掉。
 
-全局搜索 "📁"、"💼"、"🔍"、"🔄"、"⚠️" 等 Emoji 符号，全部删除或替换为普通汉字（如“搜索”、“刷新”）。
+二、 优化考勤表：一页看全 + 增加出勤总时长统计 (修改 AttendancePanel.java)
+由于你不再需要“迟到/早退”等状态，我们直接在格子里填入时长数字。同时取消表格的横向滚动，增加“个人总时长”列和底部的“所有员工总时长”汇总。
 
-二、 确保“编辑功能”生效的核心排查
-编辑功能没有生效，通常是因为表格视图（View）和底层数据（Model）脱节。
-在 ExpensePanel.java（或其他 Panel）的编辑按钮事件中，请务必确保按以下三步走：
-
-取正确的数据索引：int row = table.getSelectedRow();
-
-更新 DataManager：把弹窗返回的修改后的对象，替换掉 List 里对应的对象。
+请找到 AttendancePanel.java 中的 createMonthlyView() 和 refreshMonthlyTable() 方法，并将其全部替换为以下代码：
 
 Java
-// 必须有这一步将修改同步到内存
-DataManager.getInstance().getExpenseRecords().set(row, updatedRecord); 
-// DataManager 中必须调用对应的 save 方法写入 .dat 文件
-DataManager.getInstance().saveExpenses(); 
-刷新表格视图：必须调用 model.setRowCount(0); 然后重新 for 循环添加行，或者直接调用你写的 refreshData(); 方法，否则界面还是老数据。
+    // 新增一个全局变量用于显示总汇总
+    private JLabel grandTotalLabel;
 
-三、 考勤表一页展示（消除横向滚动条）
-当前 1~31 号需要滚动是因为列太宽，且表格不允许自动挤压。
+    private JPanel createMonthlyView() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(UIUtils.COLOR_BG_MAIN);
+        
+        // ... (查询工具栏 queryPanel 的代码保持不变，保留年份、月份、刷新、录入按钮) ...
+        // 注意：把 queryPanel 添加到 NORTH 的逻辑保留
+        panel.add(queryPanel, BorderLayout.NORTH);
+        
+        // 考勤表格 - 共 33 列 (姓名 + 31天 + 总时长)
+        String[] columnNames = new String[33];
+        columnNames[0] = "姓名";
+        for (int i = 1; i <= 31; i++) {
+            columnNames[i] = i + "日";
+        }
+        columnNames[32] = "总时长(h)"; // 新增列
 
-修改 AttendancePanel.java 的 createMonthlyView() 方法：
+        monthlyModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) { return false; }
+        };
+        
+        monthlyTable = new JTable(monthlyModel);
+        monthlyTable.setRowHeight(30);
+        monthlyTable.setFont(UIUtils.FONT_NORMAL);
+        
+        // 【关键修复】：让表格自动缩放适应屏幕，不再出现横向滚动条
+        monthlyTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        
+        // 调整列宽权重
+        monthlyTable.getColumnModel().getColumn(0).setPreferredWidth(60); // 姓名稍微宽点
+        for (int i = 1; i <= 31; i++) {
+            monthlyTable.getColumnModel().getColumn(i).setPreferredWidth(25); // 每天的格子变窄
+        }
+        monthlyTable.getColumnModel().getColumn(32).setPreferredWidth(60); // 总时长稍微宽点
+        
+        JScrollPane scrollPane = new JScrollPane(monthlyTable);
+        panel.add(scrollPane, BorderLayout.CENTER);
+        
+        // 【新增】：底部所有员工出勤时长汇总面板
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 10));
+        bottomPanel.setBackground(UIUtils.COLOR_BG_CARD);
+        grandTotalLabel = new JLabel("当月所有员工出勤总时长: 0.0 h");
+        grandTotalLabel.setFont(new Font("Microsoft YaHei", Font.BOLD, 16));
+        grandTotalLabel.setForeground(UIUtils.COLOR_PRIMARY);
+        bottomPanel.add(grandTotalLabel);
+        
+        panel.add(bottomPanel, BorderLayout.SOUTH);
+        
+        refreshMonthlyTable();
+        return panel;
+    }
 
-删除：monthlyTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-
-修改为：monthlyTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS); （让表格自动拉伸填满可视区域）
-
-缩减列宽：把循环里的 setPreferredWidth(40) 改得极小（比如 20 或 25），因为我们马上要把它改成只显示一个数字。
-
-四、 考勤数据导入与录入重写（取消迟到早退，直接输时长）
-既然只关心工作了多少小时，我们需要砍掉多余的分类。
-
-1. 修改 AttendanceRecord.java
-
-删除 private String status; 字段。
-
-将 overtimeHours 字段改名为更直接的 workHours（出勤时长）。
-
-2. 修改 AttendanceDialog.java（手动录入界面）
-
-删除 关于 statusBox（正常、迟到、早退下拉框）的所有代码。
-
-将 overtimeField 的标签改为 "出勤时长(h):"。
-
-getData() 方法直接返回输入的数值（小时）。
-
-3. 修改 AttendancePanel.java 显示逻辑
-
-在 refreshMonthlyTable() 循环中，删除判断逻辑：
-
-Java
-// 删掉这堆判断
-// if ("迟到".equals(r.getStatus())) symbol = "L"; ...
-改为直接显示时长：
-
-Java
-rowData[day] = String.valueOf(r.getWorkHours()); // 直接填入 8.0, 9.5 等数字
-五、 数据备份重写（生成 Excel 月度表格）
-你之前在 pom.xml 中已经引入了 org.apache.poi:poi-ooxml:5.2.3。现在的 .dat 和 .zip 备份对普通人不可读。我们需要修改 BackupManager.java，让其生成真实的 .xlsx。
-
-重写 BackupManager.java 建议方案：
-抛弃压缩 .dat 文件的做法，直接查出数据写入 Excel：
-
-Java
-package com.jinwanli;
-
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import java.io.FileOutputStream;
-import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import com.jinwanli.model.*;
-
-public class BackupManager {
-    public static void performBackup() {
-        try {
-            File backupDir = new File("backup");
-            if (!backupDir.exists()) backupDir.mkdirs();
-
-            String timestamp = new SimpleDateFormat("yyyy-MM").format(new Date());
-            String fileName = "backup/金万里月度数据备份_" + timestamp + ".xlsx";
+    private void refreshMonthlyTable() {
+        monthlyModel.setRowCount(0);
+        
+        String year = (String) yearBox.getSelectedItem();
+        String month = (String) monthBox.getSelectedItem();
+        
+        List<Employee> employees = DataManager.getInstance().getEmployees();
+        List<AttendanceRecord> monthRecords = DataManager.getInstance().getAttendanceByMonth(year, month);
+        
+        double grandTotalHours = 0.0; // 所有人总时长
+        
+        for (Employee emp : employees) {
+            Object[] rowData = new Object[33];
+            rowData[0] = emp.getName();
             
-            Workbook workbook = new XSSFWorkbook();
+            double empTotalHours = 0.0; // 单个员工总时长
             
-            // 1. 生成销售记录 Sheet
-            Sheet salesSheet = workbook.createSheet("销售记录");
-            Row salesHeader = salesSheet.createRow(0);
-            salesHeader.createCell(0).setCellValue("日期");
-            salesHeader.createCell(1).setCellValue("客户");
-            salesHeader.createCell(2).setCellValue("总金额");
-            List<SalesRecord> sales = DataManager.getInstance().getSalesRecords();
-            int r = 1;
-            for (SalesRecord record : sales) {
-                Row row = salesSheet.createRow(r++);
-                row.createCell(0).setCellValue(record.getDate());
-                row.createCell(1).setCellValue(record.getShipperName());
-                row.createCell(2).setCellValue(record.getTotalAmount());
+            // 获取该员工当月的所有记录
+            List<AttendanceRecord> myRecords = monthRecords.stream()
+                    .filter(r -> r.getEmployeeId().equals(emp.getId()))
+                    .collect(Collectors.toList());
+            
+            for (AttendanceRecord r : myRecords) {
+                int day = r.getDayOfMonth();
+                if (day >= 1 && day <= 31) {
+                    // 直接填入工作时长（之前叫 overtimeHours，现在代表实际录入的数字时长）
+                    double hours = r.getOvertimeHours(); 
+                    rowData[day] = hours > 0 ? String.valueOf(hours) : "";
+                    empTotalHours += hours;
+                }
             }
-
-            // 2. 生成开支记录 Sheet (同理)
-            Sheet expenseSheet = workbook.createSheet("开支与投资记录");
-            // ... 写入表头和 ExpenseRecords 数据 ...
-
-            // 3. 生成考勤记录 Sheet (同理)
-            Sheet attendanceSheet = workbook.createSheet("考勤数据(小时)");
-            // ... 写入表头和 AttendanceRecords 数据 ...
-
-            // 输出到文件
-            try (FileOutputStream out = new FileOutputStream(fileName)) {
-                workbook.write(out);
-            }
-            workbook.close();
             
-            javax.swing.JOptionPane.showMessageDialog(null, "成功生成报表：" + fileName);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            javax.swing.JOptionPane.showMessageDialog(null, "备份导出失败：" + e.getMessage());
+            rowData[32] = String.format("%.1f", empTotalHours); // 填入该员工个人总时长
+            grandTotalHours += empTotalHours; // 累加到全局总计
+            
+            monthlyModel.addRow(rowData);
+        }
+        
+        // 更新底部全局汇总标签
+        if (grandTotalLabel != null) {
+            grandTotalLabel.setText(String.format("当月所有员工出勤总时长: %.1f h", grandTotalHours));
         }
     }
-}
-执行建议：
-把你项目里跟 paintComponent 和 Graphics2D 沾边的为了“好看”写的代码先大刀阔斧地砍掉。界面换回默认的灰色风格，把各个 Dialog 里的输入框对齐，先跑通“编辑”和“纯数字考勤录入”这两条线！有问题可以贴具体报错或现象。
+三、 彻底重写 Excel 数据导入功能 (修改 AttendanceImporter.java)
+根据你上传的 CSV/Excel 结构（标准钉钉打卡导出格式：列0是姓名，列6是实际出勤小时，列7是计薪时长），一个人会占据多行（排班行、打卡时间行等），我们只需要抓取带有姓名的那一行（通常是每个人的第一行）的核心数据。
+
+将 AttendanceImporter.java 中的 importFromExcel 方法彻底替换为以下解析逻辑：
+
+Java
+    public static List<MonthlyAttendance> importFromExcel(String filePath) throws IOException {
+        List<MonthlyAttendance> records = new ArrayList<>();
+        
+        try (FileInputStream fis = new FileInputStream(filePath);
+             Workbook workbook = new XSSFWorkbook(fis)) {
+            
+            Sheet sheet = workbook.getSheetAt(0);
+            String month = extractMonthFromFileName(filePath);
+            
+            // 遍历所有行，寻找员工数据起始行
+            for (int rowNum = 0; rowNum <= sheet.getLastRowNum(); rowNum++) {
+                Row row = sheet.getRow(rowNum);
+                if (row == null) continue;
+                
+                Cell nameCell = row.getCell(0); // 你的表格中，姓名在第 0 列 (A列)
+                if (nameCell == null) continue;
+                
+                String name = getCellValue(nameCell).trim();
+                // 排除表头和空行
+                if (name.isEmpty() || name.equals("姓名") || name.equals("基本信息")) {
+                    continue;
+                }
+                
+                // 走到这里说明读到了具体的员工行
+                String empId = getCellValue(row.getCell(1)); // 工号在 B列
+                
+                // 根据你的表头：6是"实际出勤(小时)", 7是"计薪时长(小时)"
+                double actualHours = getCellDoubleValue(row, 6);
+                double paidHours = getCellDoubleValue(row, 7); 
+                
+                MonthlyAttendance record = new MonthlyAttendance(
+                    empId.isEmpty() || empId.equals("-") ? null : empId,
+                    name, 
+                    month, 
+                    0, 0, 0, // 略过不关心的天数
+                    actualHours, 
+                    paidHours, 
+                    0, 0
+                );
+                
+                // 钉钉导出的表一个人会有好几行（比如打卡时间），但只有第一行有完整汇总数据。
+                // 如果 List 中还没加过这个人，就加进去，避免重复读取下面的空行数据
+                boolean exists = records.stream().anyMatch(r -> r.getEmployeeName().equals(name));
+                if (!exists) {
+                    records.add(record);
+                }
+            }
+        } catch (Exception e) {
+            // 如果遇到 CSV 文件，POI 无法读取，建议你在导入前用 Excel 将其另存为 .xlsx 格式再导入
+            throw new IOException("读取文件失败，请确保导入的是 .xlsx 格式的 Excel 文件！", e);
+        }
+        
+        return records;
+    }
+四、 删除花里胡哨的图标，修复方框和排版错乱
+图标变成“方框”，是因为你电脑操作系统的默认字体库不支持那些特定的 Emoji 符号（比如 👤, 🔒, 📁, 🔄）。
+
+全局搜索清理 Emoji：
+在你的项目中（特别是 LoginFrame.java、MainFrame.java、SummaryPanel.java、AttendancePanel.java 中），用 IDE 的全局搜索功能（Ctrl+Shift+F），搜索诸如 👤, 🔒, 📁, 🔄, ⚠️, 👥, 📦 等字符，直接删掉或者替换成中文（如把 "🔄 刷新数据" 改为 "刷新数据"）。
+
+修复登录界面排版 (LoginFrame.java)：
+不要用复杂的嵌套 Panel。打开 LoginFrame.java 的 createLoginPanel()，把输入框部分改成最朴素的形式：
+
+Java
+// 去掉 userIcon 那些花哨设置
+JLabel userLabel = new JLabel("账 号:");
+usernameField = new JTextField(15);
+
+JLabel pwdLabel = new JLabel("密 码:");
+passwordField = new JPasswordField(15);
+
+// 把它们直接 add 到你的 panel 里即可，越简单越不会错位

@@ -108,16 +108,15 @@ public class MainFrame extends JFrame {
         
         // 导航按钮区域
         navPanel.add(createNavSection("导航菜单", new JComponent[] {
-            summaryBtn = createNavButton("S", "经营总览", "SUMMARY"),
-            attendanceBtn = createNavButton("A", "员工考勤", "ATTENDANCE"),
-            salesBtn = createNavButton("X", "销量统计", "SALES"),
-            expenseBtn = createNavButton("Z", "开支管理", "EXPENSE")
+            summaryBtn = createNavButton("经营总览", "SUMMARY"),
+            attendanceBtn = createNavButton("员工考勤", "ATTENDANCE"),
+            salesBtn = createNavButton("销量统计", "SALES"),
+            expenseBtn = createNavButton("开支管理", "EXPENSE")
         }));
         
-        // 操作区域
         navPanel.add(createNavSection("操作", new JComponent[] {
-            backupBtn = createNavButton("B", "本地备份", "BACKUP"),
-            exitBtn = createNavButton("Q", "退出系统", "EXIT")
+            backupBtn = createNavButton("本地备份", "BACKUP"),
+            exitBtn = createNavButton("退出系统", "EXIT")
         }));
         
         navPanel.add(Box.createVerticalGlue());
@@ -156,8 +155,8 @@ public class MainFrame extends JFrame {
         return section;
     }
     
-    private JButton createNavButton(String icon, String text, String action) {
-        JButton btn = new JButton() {
+    private JButton createNavButton(String text, String action) {
+        JButton btn = new JButton(text) {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -173,42 +172,17 @@ public class MainFrame extends JFrame {
             }
         };
         
-        btn.setLayout(new BorderLayout(10, 0));
         btn.setOpaque(false);
         btn.setContentAreaFilled(false);
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setMaximumSize(new Dimension(220, 44));
         btn.setPreferredSize(new Dimension(220, 44));
-        btn.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 15));
+        btn.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
         
-        // 左侧图标 - 用圆形背景
-        JPanel iconBox = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(UIUtils.COLOR_PRIMARY);
-                g2.fillOval(0, 0, 24, 24);
-                g2.dispose();
-            }
-        };
-        iconBox.setOpaque(false);
-        iconBox.setPreferredSize(new Dimension(24, 24));
-        iconBox.setLayout(new GridBagLayout());
-        
-        JLabel iconLabel = new JLabel(icon);
-        iconLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        iconLabel.setForeground(Color.WHITE);
-        iconBox.add(iconLabel);
-        
-        // 文字 - 白色
-        JLabel textLabel = new JLabel(text);
-        textLabel.setFont(UIUtils.FONT_BODY);
-        textLabel.setForeground(Color.WHITE);  // 白色文字
-        
-        btn.add(iconBox, BorderLayout.WEST);
-        btn.add(textLabel, BorderLayout.CENTER);
+        btn.setFont(UIUtils.FONT_BODY);
+        btn.setForeground(Color.WHITE);
+        btn.setHorizontalAlignment(SwingConstants.LEFT);
         
         btn.addActionListener(e -> handleNavClick(action));
         
