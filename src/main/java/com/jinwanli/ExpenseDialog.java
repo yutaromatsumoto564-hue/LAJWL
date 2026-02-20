@@ -8,17 +8,13 @@ import java.util.Date;
 
 public class ExpenseDialog extends JDialog {
     private JComboBox<String> categoryBox;
-    private JTextField amountField;
-    private JTextField usageField;
-    private JTextField handlerField;
-    private JTextField dateField;
-    private JTextField projectField;
+    private JTextField amountField, usageField, handlerField, dateField, projectField;
     private boolean confirmed = false;
 
     public ExpenseDialog(JFrame parent, ExpenseRecord existingRecord) {
         super(parent, existingRecord == null ? "添加支出记录" : "编辑支出记录", true);
         setLayout(new BorderLayout());
-        setSize(400, 420);
+        setSize(450, 480);
         setLocationRelativeTo(parent);
         setResizable(false);
 
@@ -37,19 +33,13 @@ public class ExpenseDialog extends JDialog {
         gbc.insets = new Insets(10, 5, 10, 5);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         
-        gbc.gridx = 0; gbc.gridy = 0;
-        formPanel.add(new JLabel("分类:"), gbc);
+        int row = 0;
         categoryBox = UIUtils.createComboBox(new String[]{"原材料采购", "车旅费", "伙食费", "电费", "房租", "设备维护", "项目投资", "其他支出"});
-        gbc.gridx = 1;
-        formPanel.add(categoryBox, gbc);
+        addFormRow(formPanel, gbc, row++, "分类:", categoryBox);
         
-        gbc.gridx = 0; gbc.gridy = 1;
-        formPanel.add(new JLabel("投资项目:"), gbc);
         projectField = UIUtils.createTextField();
         projectField.setEnabled(false);
-        projectField.setToolTipText("仅在选择'项目投资'时可用");
-        gbc.gridx = 1;
-        formPanel.add(projectField, gbc);
+        addFormRow(formPanel, gbc, row++, "投资项目:", projectField);
         
         categoryBox.addActionListener(e -> {
             boolean isInvestment = "项目投资".equals(categoryBox.getSelectedItem());
@@ -57,31 +47,19 @@ public class ExpenseDialog extends JDialog {
             if (!isInvestment) projectField.setText("");
         });
         
-        gbc.gridx = 0; gbc.gridy = 2;
-        formPanel.add(new JLabel("金额(元):"), gbc);
         amountField = UIUtils.createTextField();
         amountField.setText("0");
-        gbc.gridx = 1;
-        formPanel.add(amountField, gbc);
+        addFormRow(formPanel, gbc, row++, "金额(元):", amountField);
         
-        gbc.gridx = 0; gbc.gridy = 3;
-        formPanel.add(new JLabel("用途:"), gbc);
         usageField = UIUtils.createTextField();
-        gbc.gridx = 1;
-        formPanel.add(usageField, gbc);
+        addFormRow(formPanel, gbc, row++, "用途:", usageField);
         
-        gbc.gridx = 0; gbc.gridy = 4;
-        formPanel.add(new JLabel("经手人:"), gbc);
         handlerField = UIUtils.createTextField();
-        gbc.gridx = 1;
-        formPanel.add(handlerField, gbc);
+        addFormRow(formPanel, gbc, row++, "经手人:", handlerField);
         
-        gbc.gridx = 0; gbc.gridy = 5;
-        formPanel.add(new JLabel("日期(YYYY-MM-DD):"), gbc);
         dateField = UIUtils.createTextField();
         dateField.setText(new SimpleDateFormat("yyyy-MM-dd").format(new Date()));
-        gbc.gridx = 1;
-        formPanel.add(dateField, gbc);
+        addFormRow(formPanel, gbc, row++, "日期(YYYY-MM-DD):", dateField);
         
         if (existingRecord != null) {
             categoryBox.setSelectedItem(existingRecord.getCategory());
@@ -120,6 +98,14 @@ public class ExpenseDialog extends JDialog {
         add(titlePanel, BorderLayout.NORTH);
         add(formPanel, BorderLayout.CENTER);
         add(btnPanel, BorderLayout.SOUTH);
+    }
+
+    private void addFormRow(JPanel panel, GridBagConstraints gbc, int row, String label, JComponent comp) {
+        gbc.gridy = row;
+        gbc.gridx = 0; gbc.weightx = 0.0;
+        panel.add(new JLabel(label), gbc);
+        gbc.gridx = 1; gbc.weightx = 1.0;
+        panel.add(comp, gbc);
     }
 
     public ExpenseRecord getData() {

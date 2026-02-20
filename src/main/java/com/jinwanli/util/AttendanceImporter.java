@@ -294,7 +294,11 @@ public class AttendanceImporter {
                 if (name.isEmpty() || name.equals("姓名") || name.equals("基本信息")) continue;
                 
                 String empId = matchEmployeeId(name, employees);
-                if (empId == null) continue;
+                if (empId == null) {
+                    empId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+                    Employee newEmp = new Employee(empId, name, "员工", "-", "-", 0.0, 0.0, 0.0);
+                    DataManager.getInstance().addEmployee(newEmp);
+                }
 
                 int startCol = 17; 
                 for (int day = 1; day <= 31; day++) {

@@ -20,7 +20,7 @@ public class SalesPanel extends JPanel {
         setBackground(UIUtils.COLOR_BG_MAIN);
         add(UIUtils.createTitlePanel("销量统计管理"), BorderLayout.NORTH);
 
-        String[] columnNames = {"货主", "筐数", "每筐(斤)", "净重(斤)", "单价", "总金额", "日期"};
+        String[] columnNames = {"客户/收货方", "商品/型号", "单价(元)", "数量", "总金额(元)", "经手人", "日期"};
         model = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int col) {
@@ -35,21 +35,18 @@ public class SalesPanel extends JPanel {
                 try {
                     switch (column) {
                         case 0: record.setShipperName(newValue); break;
-                        case 1: record.setBasketCount(Integer.parseInt(newValue)); break;
-                        case 2: record.setWeightPerBasket(Double.parseDouble(newValue)); break;
-                        case 3: break;
-                        case 4: 
-                            record.setPricePerJin(Double.parseDouble(newValue)); 
-                            break;
-                        case 5: break;
+                        case 1: record.setProductName(newValue); break;
+                        case 2: record.setPricePerJin(Double.parseDouble(newValue)); break;
+                        case 3: record.setBasketCount(Integer.parseInt(newValue)); break;
+                        case 4: break;
+                        case 5: record.setHandler(newValue); break;
                         case 6: record.setDate(newValue); break;
                     }
                     DataManager.getInstance().updateSalesRecord(row, record);
                     super.setValueAt(aValue, row, column);
                     
-                    if (column == 1 || column == 2 || column == 4) {
-                        super.setValueAt(String.format("%.2f", record.getNetWeight()), row, 3);
-                        super.setValueAt(String.format("%.2f", record.getTotalAmount()), row, 5);
+                    if (column == 2 || column == 3) {
+                        super.setValueAt(String.format("%.2f", record.getTotalAmount()), row, 4);
                     }
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(null, "输入数字格式有误！", "错误", JOptionPane.ERROR_MESSAGE);
@@ -125,8 +122,8 @@ public class SalesPanel extends JPanel {
         List<SalesRecord> list = DataManager.getInstance().getSalesRecords();
         for (SalesRecord r : list) {
             model.addRow(new Object[]{
-                r.getShipperName(), r.getBasketCount(), r.getWeightPerBasket(),
-                r.getNetWeight(), r.getPricePerJin(), r.getTotalAmount(), r.getDate()
+                r.getShipperName(), r.getProductName(), r.getPricePerJin(),
+                r.getBasketCount(), r.getTotalAmount(), r.getHandler(), r.getDate()
             });
         }
     }
@@ -138,22 +135,22 @@ public class SalesPanel extends JPanel {
             return;
         }
 
-        String shipper = table.getValueAt(row, 0).toString();
-        String baskets = table.getValueAt(row, 1).toString();
-        String weightPer = table.getValueAt(row, 2).toString();
-        String netWeight = table.getValueAt(row, 3).toString();
-        String price = table.getValueAt(row, 4).toString();
-        String total = table.getValueAt(row, 5).toString();
+        String customer = table.getValueAt(row, 0).toString();
+        String product = table.getValueAt(row, 1).toString();
+        String price = table.getValueAt(row, 2).toString();
+        String qty = table.getValueAt(row, 3).toString();
+        String total = table.getValueAt(row, 4).toString();
+        String handler = table.getValueAt(row, 5).toString();
         String date = table.getValueAt(row, 6).toString();
 
         Map<String, String> content = new LinkedHashMap<>();
-        content.put("客户名称:", shipper);
+        content.put("客户名称:", customer);
         content.put("交易日期:", date);
+        content.put("经手人:", handler);
         content.put("----------------", "--------------------");
-        content.put("商品筐数:", baskets + " 筐");
-        content.put("单筐重量:", weightPer + " 斤");
-        content.put("商品净重:", netWeight + " 斤");
-        content.put("销售单价:", price + " 元/斤");
+        content.put("商品名称:", product);
+        content.put("销售单价:", price + " 元");
+        content.put("销售数量:", qty);
         content.put("----------------", "--------------------");
         content.put("合计金额:", total + " 元");
 
