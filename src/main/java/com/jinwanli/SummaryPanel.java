@@ -209,7 +209,7 @@ public class SummaryPanel extends JPanel {
         tLabel.setForeground(UIUtils.COLOR_TEXT_SECONDARY);
         
         JLabel vLabel = new JLabel(value);
-        vLabel.setFont(new Font("Arial", Font.BOLD, 32));
+        vLabel.setFont(new Font("Dialog", Font.BOLD, 32));
         vLabel.setForeground(UIUtils.COLOR_TEXT_PRIMARY);
         
         card.add(tLabel, BorderLayout.NORTH);
