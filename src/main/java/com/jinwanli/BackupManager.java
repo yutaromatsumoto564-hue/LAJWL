@@ -37,6 +37,7 @@ public class BackupManager {
 
         CellStyle titleStyle = wb.createCellStyle();
         titleStyle.setAlignment(HorizontalAlignment.CENTER);
+        titleStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         Font titleFont = wb.createFont();
         titleFont.setBold(true);
         titleFont.setFontHeightInPoints((short) 16);
@@ -44,10 +45,17 @@ public class BackupManager {
         
         CellStyle centerStyle = wb.createCellStyle();
         centerStyle.setAlignment(HorizontalAlignment.CENTER);
+        centerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        CellStyle headerStyle = wb.createCellStyle();
+        headerStyle.setAlignment(HorizontalAlignment.CENTER);
+        headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        headerStyle.setWrapText(true);
 
         Row row0 = sheet.createRow(0);
+        row0.setHeightInPoints(30);
         Cell titleCell = row0.createCell(0);
-        titleCell.setCellValue("金 万 里 农 业 嘴 工 考 勤 表");
+        titleCell.setCellValue("金 万 里 农 业 员 工 考 勤 表");
         titleCell.setCellStyle(titleStyle);
         sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 33));
 
@@ -55,23 +63,36 @@ public class BackupManager {
         Cell subtitleCell = row1.createCell(0);
         subtitleCell.setCellValue("（ " + month + " ） 月");
         
+        sheet.createRow(2);
+
         Row row3 = sheet.createRow(3);
-        row3.createCell(0).setCellValue("序号");
-        row3.createCell(1).setCellValue("姓 名");
-        row3.createCell(2).setCellValue("出   勤   情   况");
+        row3.setHeightInPoints(25);
+        Cell c0 = row3.createCell(0); c0.setCellValue("序号"); c0.setCellStyle(headerStyle);
+        Cell c1 = row3.createCell(1); c1.setCellValue("姓 名"); c1.setCellStyle(headerStyle);
+        Cell c2 = row3.createCell(2); c2.setCellValue("出   勤   情   况"); c2.setCellStyle(headerStyle);
         sheet.addMergedRegion(new CellRangeAddress(3, 3, 2, 32));
-        row3.createCell(33).setCellValue("本月\n出勤");
+        Cell c33 = row3.createCell(33); c33.setCellValue("本月\n出勤"); c33.setCellStyle(headerStyle);
 
         Row row4 = sheet.createRow(4);
         for (int i = 1; i <= 31; i++) {
-            row4.createCell(i + 1).setCellValue(i);
+            Cell dayCell = row4.createCell(i + 1);
+            dayCell.setCellValue(i);
+            dayCell.setCellStyle(centerStyle);
         }
+
+        sheet.setColumnWidth(0, 5 * 256);
+        sheet.setColumnWidth(1, 10 * 256);
+        for (int i = 2; i <= 32; i++) {
+            sheet.setColumnWidth(i, 4 * 256);
+        }
+        sheet.setColumnWidth(33, 8 * 256);
 
         List<Employee> employees = DataManager.getInstance().getEmployees();
         List<AttendanceRecord> monthRecords = DataManager.getInstance().getAttendanceByMonth(year, month);
         
-        int r = 5;
+        int rowIndex = 5;
         int seq = 1;
+        
         for (Employee emp : employees) {
             List<AttendanceRecord> myRecords = monthRecords.stream()
                     .filter(record -> record.getEmployeeId().equals(emp.getId()))
@@ -82,7 +103,7 @@ public class BackupManager {
             );
             if (!hasValidRecord) continue;
 
-            Row dataRow = sheet.createRow(r++);
+            Row dataRow = sheet.createRow(rowIndex++);
             dataRow.createCell(0).setCellValue(seq++);
             dataRow.createCell(1).setCellValue(emp.getName());
 
@@ -110,11 +131,19 @@ public class BackupManager {
         Workbook wb = new XSSFWorkbook();
         Sheet sheet = wb.createSheet("账目");
 
+        CellStyle centerStyle = wb.createCellStyle();
+        centerStyle.setAlignment(HorizontalAlignment.CENTER);
+
         Row headerRow = sheet.createRow(0);
         headerRow.createCell(0).setCellValue("（ " + month + " ）月");
         headerRow.createCell(1).setCellValue("出货重量/数量");
         headerRow.createCell(2).setCellValue("单价");
         headerRow.createCell(3).setCellValue("总额");
+
+        sheet.setColumnWidth(0, 12 * 256);
+        sheet.setColumnWidth(1, 16 * 256);
+        sheet.setColumnWidth(2, 12 * 256);
+        sheet.setColumnWidth(3, 15 * 256);
 
         List<SalesRecord> monthSales = DataManager.getInstance().getSalesRecords().stream()
                 .filter(s -> s.getDate().startsWith(year + "-" + month))
@@ -135,10 +164,14 @@ public class BackupManager {
             if (!dailySales.isEmpty()) {
                 int dailyQty = dailySales.stream().mapToInt(SalesRecord::getBasketCount).sum();
                 double dailyTotal = dailySales.stream().mapToDouble(SalesRecord::getTotalAmount).sum();
-                double avgPrice = dailyTotal / dailyQty;
-
+                
                 row.createCell(1).setCellValue(dailyQty);
-                row.createCell(2).setCellValue(String.format("%.2f", avgPrice));
+                
+                if (dailyQty > 0) {
+                    double avgPrice = dailyTotal / dailyQty;
+                    row.createCell(2).setCellValue(String.format("%.2f", avgPrice));
+                }
+                
                 row.createCell(3).setCellValue(dailyTotal);
 
                 grandTotalQty += dailyQty;
