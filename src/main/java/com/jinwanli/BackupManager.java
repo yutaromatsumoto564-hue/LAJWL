@@ -42,14 +42,20 @@ public class BackupManager {
         titleFont.setBold(true);
         titleFont.setFontHeightInPoints((short) 16);
         titleStyle.setFont(titleFont);
-        
-        CellStyle centerStyle = wb.createCellStyle();
-        centerStyle.setAlignment(HorizontalAlignment.CENTER);
-        centerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        CellStyle borderStyle = wb.createCellStyle();
+        borderStyle.setBorderBottom(BorderStyle.THIN);
+        borderStyle.setBorderTop(BorderStyle.THIN);
+        borderStyle.setBorderLeft(BorderStyle.THIN);
+        borderStyle.setBorderRight(BorderStyle.THIN);
+        borderStyle.setAlignment(HorizontalAlignment.CENTER);
+        borderStyle.setVerticalAlignment(VerticalAlignment.CENTER);
 
         CellStyle headerStyle = wb.createCellStyle();
-        headerStyle.setAlignment(HorizontalAlignment.CENTER);
-        headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        headerStyle.cloneStyleFrom(borderStyle);
+        Font boldFont = wb.createFont();
+        boldFont.setBold(true);
+        headerStyle.setFont(boldFont);
         headerStyle.setWrapText(true);
 
         Row row0 = sheet.createRow(0);
@@ -67,17 +73,25 @@ public class BackupManager {
 
         Row row3 = sheet.createRow(3);
         row3.setHeightInPoints(25);
-        Cell c0 = row3.createCell(0); c0.setCellValue("序号"); c0.setCellStyle(headerStyle);
-        Cell c1 = row3.createCell(1); c1.setCellValue("姓 名"); c1.setCellStyle(headerStyle);
-        Cell c2 = row3.createCell(2); c2.setCellValue("出   勤   情   况"); c2.setCellStyle(headerStyle);
-        sheet.addMergedRegion(new CellRangeAddress(3, 3, 2, 32));
-        Cell c33 = row3.createCell(33); c33.setCellValue("本月\n出勤"); c33.setCellStyle(headerStyle);
-
         Row row4 = sheet.createRow(4);
+
+        for (int c = 0; c <= 33; c++) {
+            row3.createCell(c).setCellStyle(headerStyle);
+            row4.createCell(c).setCellStyle(headerStyle);
+        }
+
+        row3.getCell(0).setCellValue("序号");
+        row3.getCell(1).setCellValue("姓 名");
+        row3.getCell(2).setCellValue("出   勤   情   况");
+        row3.getCell(33).setCellValue("本月\n出勤");
+
+        sheet.addMergedRegion(new CellRangeAddress(3, 3, 2, 32));
+        sheet.addMergedRegion(new CellRangeAddress(3, 4, 0, 0));
+        sheet.addMergedRegion(new CellRangeAddress(3, 4, 1, 1));
+        sheet.addMergedRegion(new CellRangeAddress(3, 4, 33, 33));
+
         for (int i = 1; i <= 31; i++) {
-            Cell dayCell = row4.createCell(i + 1);
-            dayCell.setCellValue(i);
-            dayCell.setCellStyle(centerStyle);
+            row4.getCell(i + 1).setCellValue(i);
         }
 
         sheet.setColumnWidth(0, 5 * 256);
@@ -92,6 +106,7 @@ public class BackupManager {
         
         int rowIndex = 5;
         int seq = 1;
+        double grandTotalHours = 0;
         
         for (Employee emp : employees) {
             List<AttendanceRecord> myRecords = monthRecords.stream()
@@ -104,8 +119,12 @@ public class BackupManager {
             if (!hasValidRecord) continue;
 
             Row dataRow = sheet.createRow(rowIndex++);
-            dataRow.createCell(0).setCellValue(seq++);
-            dataRow.createCell(1).setCellValue(emp.getName());
+            for (int c = 0; c <= 33; c++) {
+                dataRow.createCell(c).setCellStyle(borderStyle);
+            }
+
+            dataRow.getCell(0).setCellValue(seq++);
+            dataRow.getCell(1).setCellValue(emp.getName());
 
             double totalHours = 0;
             for (AttendanceRecord record : myRecords) {
@@ -113,13 +132,21 @@ public class BackupManager {
                 if (day >= 1 && day <= 31) {
                     double hours = record.getWorkHours();
                     if (hours > 0) {
-                        dataRow.createCell(day + 1).setCellValue(hours);
+                        dataRow.getCell(day + 1).setCellValue(hours);
                         totalHours += hours;
                     }
                 }
             }
-            dataRow.createCell(33).setCellValue(totalHours);
+            dataRow.getCell(33).setCellValue(totalHours);
+            grandTotalHours += totalHours;
         }
+
+        Row totalRow = sheet.createRow(rowIndex);
+        for (int c = 0; c <= 33; c++) {
+            totalRow.createCell(c).setCellStyle(headerStyle);
+        }
+        totalRow.getCell(1).setCellValue("总计");
+        totalRow.getCell(33).setCellValue(grandTotalHours);
 
         try (FileOutputStream out = new FileOutputStream(fileName)) {
             wb.write(out);
@@ -131,14 +158,28 @@ public class BackupManager {
         Workbook wb = new XSSFWorkbook();
         Sheet sheet = wb.createSheet("账目");
 
-        CellStyle centerStyle = wb.createCellStyle();
-        centerStyle.setAlignment(HorizontalAlignment.CENTER);
+        CellStyle borderStyle = wb.createCellStyle();
+        borderStyle.setBorderBottom(BorderStyle.THIN);
+        borderStyle.setBorderTop(BorderStyle.THIN);
+        borderStyle.setBorderLeft(BorderStyle.THIN);
+        borderStyle.setBorderRight(BorderStyle.THIN);
+        borderStyle.setAlignment(HorizontalAlignment.CENTER);
+        borderStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        CellStyle headerStyle = wb.createCellStyle();
+        headerStyle.cloneStyleFrom(borderStyle);
+        Font boldFont = wb.createFont();
+        boldFont.setBold(true);
+        headerStyle.setFont(boldFont);
 
         Row headerRow = sheet.createRow(0);
-        headerRow.createCell(0).setCellValue("（ " + month + " ）月");
-        headerRow.createCell(1).setCellValue("出货重量/数量");
-        headerRow.createCell(2).setCellValue("单价");
-        headerRow.createCell(3).setCellValue("总额");
+        for (int c = 0; c <= 3; c++) {
+            headerRow.createCell(c).setCellStyle(headerStyle);
+        }
+        headerRow.getCell(0).setCellValue("（ " + month + " ）月");
+        headerRow.getCell(1).setCellValue("出货重量/数量");
+        headerRow.getCell(2).setCellValue("单价");
+        headerRow.getCell(3).setCellValue("总额");
 
         sheet.setColumnWidth(0, 12 * 256);
         sheet.setColumnWidth(1, 16 * 256);
@@ -154,7 +195,11 @@ public class BackupManager {
 
         for (int i = 1; i <= 31; i++) {
             Row row = sheet.createRow(i);
-            row.createCell(0).setCellValue(i);
+            for (int c = 0; c <= 3; c++) {
+                row.createCell(c).setCellStyle(borderStyle);
+            }
+            
+            row.getCell(0).setCellValue(i); 
             
             String targetDate = year + "-" + month + "-" + String.format("%02d", i);
             List<SalesRecord> dailySales = monthSales.stream()
@@ -165,26 +210,27 @@ public class BackupManager {
                 int dailyQty = dailySales.stream().mapToInt(SalesRecord::getBasketCount).sum();
                 double dailyTotal = dailySales.stream().mapToDouble(SalesRecord::getTotalAmount).sum();
                 
-                row.createCell(1).setCellValue(dailyQty);
-                
+                row.getCell(1).setCellValue(dailyQty);
                 if (dailyQty > 0) {
                     double avgPrice = dailyTotal / dailyQty;
-                    row.createCell(2).setCellValue(String.format("%.2f", avgPrice));
+                    row.getCell(2).setCellValue(String.format("%.2f", avgPrice));
                 }
-                
-                row.createCell(3).setCellValue(dailyTotal);
+                row.getCell(3).setCellValue(dailyTotal);
 
                 grandTotalQty += dailyQty;
                 grandTotalAmount += dailyTotal;
             } else {
-                row.createCell(3).setCellValue(0);
+                row.getCell(3).setCellValue(0);
             }
         }
 
         Row totalRow = sheet.createRow(32);
-        totalRow.createCell(0).setCellValue("总计");
-        totalRow.createCell(1).setCellValue(grandTotalQty);
-        totalRow.createCell(3).setCellValue(grandTotalAmount);
+        for (int c = 0; c <= 3; c++) {
+            totalRow.createCell(c).setCellStyle(headerStyle);
+        }
+        totalRow.getCell(0).setCellValue("总计");
+        totalRow.getCell(1).setCellValue(grandTotalQty);
+        totalRow.getCell(3).setCellValue(grandTotalAmount);
 
         try (FileOutputStream out = new FileOutputStream(fileName)) {
             wb.write(out);
