@@ -2,6 +2,7 @@ package com.jinwanli;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.File;
@@ -66,9 +67,7 @@ public class BackupManager {
         sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 33));
 
         Row row1 = sheet.createRow(1);
-        Cell subtitleCell = row1.createCell(0);
-        subtitleCell.setCellValue("（ " + month + " ） 月");
-        
+        row1.createCell(0).setCellValue("（ " + month + " ） 月");
         sheet.createRow(2);
 
         Row row3 = sheet.createRow(3);
@@ -85,9 +84,9 @@ public class BackupManager {
         row3.getCell(2).setCellValue("出   勤   情   况");
         row3.getCell(33).setCellValue("本月\n出勤");
 
-        sheet.addMergedRegion(new CellRangeAddress(3, 3, 2, 32));
-        sheet.addMergedRegion(new CellRangeAddress(3, 4, 0, 0));
-        sheet.addMergedRegion(new CellRangeAddress(3, 4, 1, 1));
+        sheet.addMergedRegion(new CellRangeAddress(3, 3, 2, 32)); 
+        sheet.addMergedRegion(new CellRangeAddress(3, 4, 0, 0));  
+        sheet.addMergedRegion(new CellRangeAddress(3, 4, 1, 1));  
         sheet.addMergedRegion(new CellRangeAddress(3, 4, 33, 33));
 
         for (int i = 1; i <= 31; i++) {
@@ -106,7 +105,6 @@ public class BackupManager {
         
         int rowIndex = 5;
         int seq = 1;
-        double grandTotalHours = 0;
         
         for (Employee emp : employees) {
             List<AttendanceRecord> myRecords = monthRecords.stream()
@@ -126,27 +124,34 @@ public class BackupManager {
             dataRow.getCell(0).setCellValue(seq++);
             dataRow.getCell(1).setCellValue(emp.getName());
 
-            double totalHours = 0;
             for (AttendanceRecord record : myRecords) {
                 int day = record.getDayOfMonth();
                 if (day >= 1 && day <= 31) {
                     double hours = record.getWorkHours();
                     if (hours > 0) {
                         dataRow.getCell(day + 1).setCellValue(hours);
-                        totalHours += hours;
                     }
                 }
             }
-            dataRow.getCell(33).setCellValue(totalHours);
-            grandTotalHours += totalHours;
+            
+            int excelRowIndex = rowIndex;
+            dataRow.getCell(33).setCellFormula("SUM(C" + excelRowIndex + ":AG" + excelRowIndex + ")");
         }
 
         Row totalRow = sheet.createRow(rowIndex);
         for (int c = 0; c <= 33; c++) {
-            totalRow.createCell(c).setCellStyle(headerStyle);
+            totalRow.createCell(c).setCellStyle(headerStyle); 
         }
         totalRow.getCell(1).setCellValue("总计");
-        totalRow.getCell(33).setCellValue(grandTotalHours);
+
+        if (rowIndex > 5) {
+            for (int c = 2; c <= 33; c++) {
+                String colLetter = CellReference.convertNumToColString(c); 
+                totalRow.getCell(c).setCellFormula("SUM(" + colLetter + "6:" + colLetter + rowIndex + ")");
+            }
+        }
+
+        sheet.setForceFormulaRecalculation(true);
 
         try (FileOutputStream out = new FileOutputStream(fileName)) {
             wb.write(out);
@@ -190,9 +195,6 @@ public class BackupManager {
                 .filter(s -> s.getDate().startsWith(year + "-" + month))
                 .collect(Collectors.toList());
 
-        double grandTotalAmount = 0;
-        int grandTotalQty = 0;
-
         for (int i = 1; i <= 31; i++) {
             Row row = sheet.createRow(i);
             for (int c = 0; c <= 3; c++) {
@@ -216,9 +218,6 @@ public class BackupManager {
                     row.getCell(2).setCellValue(String.format("%.2f", avgPrice));
                 }
                 row.getCell(3).setCellValue(dailyTotal);
-
-                grandTotalQty += dailyQty;
-                grandTotalAmount += dailyTotal;
             } else {
                 row.getCell(3).setCellValue(0);
             }
@@ -226,11 +225,14 @@ public class BackupManager {
 
         Row totalRow = sheet.createRow(32);
         for (int c = 0; c <= 3; c++) {
-            totalRow.createCell(c).setCellStyle(headerStyle);
+            totalRow.createCell(c).setCellStyle(headerStyle); 
         }
         totalRow.getCell(0).setCellValue("总计");
-        totalRow.getCell(1).setCellValue(grandTotalQty);
-        totalRow.getCell(3).setCellValue(grandTotalAmount);
+        
+        totalRow.getCell(1).setCellFormula("SUM(B2:B32)");
+        totalRow.getCell(3).setCellFormula("SUM(D2:D32)");
+
+        sheet.setForceFormulaRecalculation(true);
 
         try (FileOutputStream out = new FileOutputStream(fileName)) {
             wb.write(out);
