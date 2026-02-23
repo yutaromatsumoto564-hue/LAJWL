@@ -1,114 +1,161 @@
 package com.jinwanli;
 
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.jinwanli.model.*;
 
 public class BackupManager {
-    public static void performBackup() {
+
+    public static void performBackup(String year, String month) {
         try {
             File backupDir = new File("backup");
             if (!backupDir.exists()) backupDir.mkdirs();
 
-            String timestamp = new SimpleDateFormat("yyyy-MM").format(new Date());
-            String fileName = "backup/金万里月度数据备份_" + timestamp + ".xlsx";
+            String baseName = "backup/金万里_" + year + "年" + month + "月_";
+            
+            exportAttendance(baseName + "员工考勤表.xlsx", year, month);
+            exportAccount(baseName + "账目.xlsx", year, month);
 
-            Workbook workbook = new XSSFWorkbook();
-
-            Sheet salesSheet = workbook.createSheet("销售记录");
-            Row salesHeader = salesSheet.createRow(0);
-            salesHeader.createCell(0).setCellValue("日期");
-            salesHeader.createCell(1).setCellValue("客户");
-            salesHeader.createCell(2).setCellValue("总金额");
-            List<SalesRecord> sales = DataManager.getInstance().getSalesRecords();
-            int r = 1;
-            for (SalesRecord record : sales) {
-                Row row = salesSheet.createRow(r++);
-                row.createCell(0).setCellValue(record.getDate());
-                row.createCell(1).setCellValue(record.getShipperName());
-                row.createCell(2).setCellValue(record.getTotalAmount());
-            }
-
-            Sheet expenseSheet = workbook.createSheet("开支与投资记录");
-            Row expenseHeader = expenseSheet.createRow(0);
-            expenseHeader.createCell(0).setCellValue("日期");
-            expenseHeader.createCell(1).setCellValue("分类");
-            expenseHeader.createCell(2).setCellValue("关联项目");
-            expenseHeader.createCell(3).setCellValue("金额");
-            expenseHeader.createCell(4).setCellValue("用途");
-            expenseHeader.createCell(5).setCellValue("经手人");
-            List<ExpenseRecord> expenses = DataManager.getInstance().getExpenseRecords();
-            r = 1;
-            for (ExpenseRecord record : expenses) {
-                Row row = expenseSheet.createRow(r++);
-                row.createCell(0).setCellValue(record.getDate());
-                row.createCell(1).setCellValue(record.getCategory());
-                row.createCell(2).setCellValue(record.getTargetProject() != null ? record.getTargetProject() : "-");
-                row.createCell(3).setCellValue(record.getAmount());
-                row.createCell(4).setCellValue(record.getUsage());
-                row.createCell(5).setCellValue(record.getHandler());
-            }
-
-            Sheet attendanceSheet = workbook.createSheet("考勤数据(小时)");
-            Row attendanceHeader = attendanceSheet.createRow(0);
-            attendanceHeader.createCell(0).setCellValue("员工ID");
-            attendanceHeader.createCell(1).setCellValue("员工姓名");
-            attendanceHeader.createCell(2).setCellValue("日期");
-            attendanceHeader.createCell(3).setCellValue("工作时长(小时)");
-            List<AttendanceRecord> attendance = DataManager.getInstance().getAttendanceRecords();
-            r = 1;
-            for (AttendanceRecord record : attendance) {
-                Row row = attendanceSheet.createRow(r++);
-                row.createCell(0).setCellValue(record.getEmployeeId());
-                Employee emp = DataManager.getInstance().getEmployeeById(record.getEmployeeId());
-                row.createCell(1).setCellValue(emp != null ? emp.getName() : "");
-                row.createCell(2).setCellValue(record.getDate());
-                row.createCell(3).setCellValue(record.getWorkHours());
-            }
-
-            Sheet employeeSheet = workbook.createSheet("员工信息");
-            Row employeeHeader = employeeSheet.createRow(0);
-            employeeHeader.createCell(0).setCellValue("工号");
-            employeeHeader.createCell(1).setCellValue("姓名");
-            employeeHeader.createCell(2).setCellValue("职位");
-            employeeHeader.createCell(3).setCellValue("联系电话");
-            employeeHeader.createCell(4).setCellValue("身份证号");
-            employeeHeader.createCell(5).setCellValue("基本工资");
-            employeeHeader.createCell(6).setCellValue("绩效奖金");
-            employeeHeader.createCell(7).setCellValue("加班补贴");
-            employeeHeader.createCell(8).setCellValue("总工资");
-            List<Employee> employees = DataManager.getInstance().getEmployees();
-            r = 1;
-            for (Employee emp : employees) {
-                Row row = employeeSheet.createRow(r++);
-                row.createCell(0).setCellValue(emp.getId());
-                row.createCell(1).setCellValue(emp.getName());
-                row.createCell(2).setCellValue(emp.getPosition());
-                row.createCell(3).setCellValue(emp.getPhone());
-                row.createCell(4).setCellValue(emp.getIdCard());
-                row.createCell(5).setCellValue(emp.getBaseSalary());
-                row.createCell(6).setCellValue(emp.getPerformanceSalary());
-                row.createCell(7).setCellValue(emp.getOvertimeSalary());
-                row.createCell(8).setCellValue(emp.getTotalSalary());
-            }
-
-            try (FileOutputStream out = new FileOutputStream(fileName)) {
-                workbook.write(out);
-            }
-            workbook.close();
-
-            javax.swing.JOptionPane.showMessageDialog(null, "成功生成报表：" + fileName);
+            javax.swing.JOptionPane.showMessageDialog(null, "成功生成 " + year + "年" + month + "月 报表！\n请前往 backup 文件夹查看。");
 
         } catch (Exception e) {
             e.printStackTrace();
             javax.swing.JOptionPane.showMessageDialog(null, "备份导出失败：" + e.getMessage());
         }
+    }
+
+    private static void exportAttendance(String fileName, String year, String month) throws Exception {
+        Workbook wb = new XSSFWorkbook();
+        Sheet sheet = wb.createSheet("考勤表");
+
+        CellStyle titleStyle = wb.createCellStyle();
+        titleStyle.setAlignment(HorizontalAlignment.CENTER);
+        Font titleFont = wb.createFont();
+        titleFont.setBold(true);
+        titleFont.setFontHeightInPoints((short) 16);
+        titleStyle.setFont(titleFont);
+        
+        CellStyle centerStyle = wb.createCellStyle();
+        centerStyle.setAlignment(HorizontalAlignment.CENTER);
+
+        Row row0 = sheet.createRow(0);
+        Cell titleCell = row0.createCell(0);
+        titleCell.setCellValue("金 万 里 农 业 嘴 工 考 勤 表");
+        titleCell.setCellStyle(titleStyle);
+        sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 33));
+
+        Row row1 = sheet.createRow(1);
+        Cell subtitleCell = row1.createCell(0);
+        subtitleCell.setCellValue("（ " + month + " ） 月");
+        
+        Row row3 = sheet.createRow(3);
+        row3.createCell(0).setCellValue("序号");
+        row3.createCell(1).setCellValue("姓 名");
+        row3.createCell(2).setCellValue("出   勤   情   况");
+        sheet.addMergedRegion(new CellRangeAddress(3, 3, 2, 32));
+        row3.createCell(33).setCellValue("本月\n出勤");
+
+        Row row4 = sheet.createRow(4);
+        for (int i = 1; i <= 31; i++) {
+            row4.createCell(i + 1).setCellValue(i);
+        }
+
+        List<Employee> employees = DataManager.getInstance().getEmployees();
+        List<AttendanceRecord> monthRecords = DataManager.getInstance().getAttendanceByMonth(year, month);
+        
+        int r = 5;
+        int seq = 1;
+        for (Employee emp : employees) {
+            List<AttendanceRecord> myRecords = monthRecords.stream()
+                    .filter(record -> record.getEmployeeId().equals(emp.getId()))
+                    .collect(Collectors.toList());
+            
+            boolean hasValidRecord = myRecords.stream().anyMatch(record -> 
+                record.getWorkHours() > 0 || (record.getPunchDetails() != null && !record.getPunchDetails().contains("(无打卡记录)"))
+            );
+            if (!hasValidRecord) continue;
+
+            Row dataRow = sheet.createRow(r++);
+            dataRow.createCell(0).setCellValue(seq++);
+            dataRow.createCell(1).setCellValue(emp.getName());
+
+            double totalHours = 0;
+            for (AttendanceRecord record : myRecords) {
+                int day = record.getDayOfMonth();
+                if (day >= 1 && day <= 31) {
+                    double hours = record.getWorkHours();
+                    if (hours > 0) {
+                        dataRow.createCell(day + 1).setCellValue(hours);
+                        totalHours += hours;
+                    }
+                }
+            }
+            dataRow.createCell(33).setCellValue(totalHours);
+        }
+
+        try (FileOutputStream out = new FileOutputStream(fileName)) {
+            wb.write(out);
+        }
+        wb.close();
+    }
+
+    private static void exportAccount(String fileName, String year, String month) throws Exception {
+        Workbook wb = new XSSFWorkbook();
+        Sheet sheet = wb.createSheet("账目");
+
+        Row headerRow = sheet.createRow(0);
+        headerRow.createCell(0).setCellValue("（ " + month + " ）月");
+        headerRow.createCell(1).setCellValue("出货重量/数量");
+        headerRow.createCell(2).setCellValue("单价");
+        headerRow.createCell(3).setCellValue("总额");
+
+        List<SalesRecord> monthSales = DataManager.getInstance().getSalesRecords().stream()
+                .filter(s -> s.getDate().startsWith(year + "-" + month))
+                .collect(Collectors.toList());
+
+        double grandTotalAmount = 0;
+        int grandTotalQty = 0;
+
+        for (int i = 1; i <= 31; i++) {
+            Row row = sheet.createRow(i);
+            row.createCell(0).setCellValue(i);
+            
+            String targetDate = year + "-" + month + "-" + String.format("%02d", i);
+            List<SalesRecord> dailySales = monthSales.stream()
+                    .filter(s -> s.getDate().equals(targetDate))
+                    .collect(Collectors.toList());
+
+            if (!dailySales.isEmpty()) {
+                int dailyQty = dailySales.stream().mapToInt(SalesRecord::getBasketCount).sum();
+                double dailyTotal = dailySales.stream().mapToDouble(SalesRecord::getTotalAmount).sum();
+                double avgPrice = dailyTotal / dailyQty;
+
+                row.createCell(1).setCellValue(dailyQty);
+                row.createCell(2).setCellValue(String.format("%.2f", avgPrice));
+                row.createCell(3).setCellValue(dailyTotal);
+
+                grandTotalQty += dailyQty;
+                grandTotalAmount += dailyTotal;
+            } else {
+                row.createCell(3).setCellValue(0);
+            }
+        }
+
+        Row totalRow = sheet.createRow(32);
+        totalRow.createCell(0).setCellValue("总计");
+        totalRow.createCell(1).setCellValue(grandTotalQty);
+        totalRow.createCell(3).setCellValue(grandTotalAmount);
+
+        try (FileOutputStream out = new FileOutputStream(fileName)) {
+            wb.write(out);
+        }
+        wb.close();
     }
 }

@@ -86,6 +86,14 @@ public class AttendancePanel extends JPanel {
         });
         queryPanel.add(addBtn);
 
+        JButton exportBtn = UIUtils.createButton("导出当月报表");
+        exportBtn.addActionListener(e -> {
+            String y = (String) yearBox.getSelectedItem();
+            String m = String.format("%02d", Integer.parseInt((String) monthBox.getSelectedItem()));
+            BackupManager.performBackup(y, m);
+        });
+        queryPanel.add(exportBtn);
+
         panel.add(queryPanel, BorderLayout.NORTH);
 
         String[] columnNames = new String[33];

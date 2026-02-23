@@ -114,11 +114,6 @@ public class MainFrame extends JFrame {
             expenseBtn = createNavButton("开支管理", "EXPENSE")
         }));
         
-        navPanel.add(createNavSection("操作", new JComponent[] {
-            backupBtn = createNavButton("本地备份", "BACKUP"),
-            exitBtn = createNavButton("退出系统", "EXIT")
-        }));
-        
         navPanel.add(Box.createVerticalGlue());
         
         JLabel versionLabel = new JLabel("v1.0.1");
@@ -191,10 +186,6 @@ public class MainFrame extends JFrame {
     
     private void handleNavClick(String action) {
         switch (action) {
-            case "BACKUP":
-                BackupManager.performBackup();
-                JOptionPane.showMessageDialog(this, "备份完成！", "提示", JOptionPane.INFORMATION_MESSAGE);
-                break;
             case "EXIT":
                 int confirm = JOptionPane.showConfirmDialog(this, 
                     "确定要退出系统吗？", "确认退出", 

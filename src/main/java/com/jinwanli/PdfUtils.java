@@ -102,20 +102,22 @@ public class PdfUtils {
 
     private static PDFont loadChineseFont(PDDocument doc) {
         String[] fontPaths = {
+            "C:/Windows/Fonts/msyh.ttc",
             "C:/Windows/Fonts/simhei.ttf",
-            "C:/Windows/Fonts/msyh.ttf",
             "C:/Windows/Fonts/simsun.ttc",
+            "C:/Windows/Fonts/STSONG.TTF",
             "/System/Library/Fonts/PingFang.ttc",
+            "/System/Library/Fonts/STHeiti Light.ttc",
             "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf"
         };
 
         for (String path : fontPaths) {
             File file = new File(path);
-            if (file.exists()) {
+            if (file.exists() && file.canRead()) {
                 try {
                     return PDType0Font.load(doc, file);
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    System.out.println("加载字体失败: " + path + "，尝试下一个...");
                 }
             }
         }
