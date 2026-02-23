@@ -12,7 +12,7 @@ public class ExpenseDialog extends JDialog {
     private boolean confirmed = false;
 
     public ExpenseDialog(JFrame parent, ExpenseRecord existingRecord) {
-        super(parent, existingRecord == null ? "添加支出记录" : "编辑支出记录", true);
+        super(parent, existingRecord == null ? "添加财务记录" : "编辑财务记录", true);
         setLayout(new BorderLayout());
         setSize(450, 480);
         setLocationRelativeTo(parent);
@@ -20,7 +20,7 @@ public class ExpenseDialog extends JDialog {
 
         JPanel titlePanel = new JPanel();
         titlePanel.setBackground(UIUtils.COLOR_PRIMARY);
-        JLabel titleLabel = new JLabel(existingRecord == null ? "添加支出记录" : "编辑支出记录");
+        JLabel titleLabel = new JLabel(existingRecord == null ? "录入财务收支" : "编辑财务收支");
         titleLabel.setFont(UIUtils.FONT_HEADING);
         titleLabel.setForeground(Color.WHITE);
         titlePanel.add(titleLabel);
@@ -34,17 +34,21 @@ public class ExpenseDialog extends JDialog {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         
         int row = 0;
-        categoryBox = UIUtils.createComboBox(new String[]{"原材料采购", "车旅费", "伙食费", "电费", "房租", "设备维护", "项目投资", "其他支出"});
-        addFormRow(formPanel, gbc, row++, "分类:", categoryBox);
+        categoryBox = UIUtils.createComboBox(new String[]{
+            "原材料采购", "车旅费", "伙食费", "电费", "房租", "设备维护", "项目投资", "其他支出", 
+            "股东注资(收入)", "政府补贴(收入)", "其他(收入)"
+        });
+        addFormRow(formPanel, gbc, row++, "收支分类:", categoryBox);
         
         projectField = UIUtils.createTextField();
         projectField.setEnabled(false);
-        addFormRow(formPanel, gbc, row++, "投资项目:", projectField);
+        addFormRow(formPanel, gbc, row++, "关联项目:", projectField);
         
         categoryBox.addActionListener(e -> {
-            boolean isInvestment = "项目投资".equals(categoryBox.getSelectedItem());
-            projectField.setEnabled(isInvestment);
-            if (!isInvestment) projectField.setText("");
+            String selected = (String) categoryBox.getSelectedItem();
+            boolean isProject = selected.contains("项目") || selected.contains("注资");
+            projectField.setEnabled(isProject);
+            if (!isProject) projectField.setText("");
         });
         
         amountField = UIUtils.createTextField();
@@ -52,14 +56,14 @@ public class ExpenseDialog extends JDialog {
         addFormRow(formPanel, gbc, row++, "金额(元):", amountField);
         
         usageField = UIUtils.createTextField();
-        addFormRow(formPanel, gbc, row++, "用途:", usageField);
+        addFormRow(formPanel, gbc, row++, "用途/备注:", usageField);
         
         handlerField = UIUtils.createTextField();
         addFormRow(formPanel, gbc, row++, "经手人:", handlerField);
         
         dateField = UIUtils.createTextField();
         dateField.setText(new SimpleDateFormat("yyyy-MM-dd").format(new Date()));
-        addFormRow(formPanel, gbc, row++, "日期(YYYY-MM-DD):", dateField);
+        addFormRow(formPanel, gbc, row++, "日期:", dateField);
         
         if (existingRecord != null) {
             categoryBox.setSelectedItem(existingRecord.getCategory());
@@ -67,7 +71,7 @@ public class ExpenseDialog extends JDialog {
             usageField.setText(existingRecord.getUsage());
             handlerField.setText(existingRecord.getHandler());
             dateField.setText(existingRecord.getDate());
-            if ("项目投资".equals(existingRecord.getCategory())) {
+            if (existingRecord.getCategory().contains("项目") || existingRecord.getCategory().contains("注资")) {
                 projectField.setEnabled(true);
                 projectField.setText(existingRecord.getTargetProject());
             }

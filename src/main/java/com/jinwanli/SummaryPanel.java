@@ -2,101 +2,125 @@ package com.jinwanli;
 
 import com.jinwanli.model.*;
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.util.Calendar;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 public class SummaryPanel extends JPanel {
-    private JComboBox<String> yearBox;
-    private JComboBox<String> monthBox;
-    
-    private JLabel incomeLabel;
-    private JLabel expenseLabel;
-    private JLabel salaryLabel;
-    private JLabel profitLabel;
-    
-    private JLabel empCountLabel;
-    private JLabel salesCountLabel;
-    private JLabel abnormalLabel;
-    
+    private JLabel incomeLabel, expenseLabel, salaryLabel, profitLabel;
     private JPanel chartPanel;
-    private java.util.List<BarRegion> clickableBars = new java.util.ArrayList<>();
+    private List<String> last6Months;
+    private List<BarRegion> clickableBars = new ArrayList<>();
 
     public SummaryPanel() {
-        setLayout(new BorderLayout());
+        setLayout(new BorderLayout(20, 20));
         setBackground(UIUtils.COLOR_BG_MAIN);
-        add(UIUtils.createTitlePanel("企业经营总览"), BorderLayout.NORTH);
+        setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        JPanel controlPanel = new JPanel();
-        controlPanel.setBackground(UIUtils.COLOR_BG_CARD);
-        controlPanel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, UIUtils.COLOR_BORDER),
-            BorderFactory.createEmptyBorder(15, 20, 15, 20)
-        ));
-        
-        controlPanel.add(new JLabel(""));
-        yearBox = UIUtils.createComboBox(UIUtils.getRecentYears());
-        yearBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
-        controlPanel.add(yearBox);
-        
-        controlPanel.add(new JLabel("年 "));
-        monthBox = UIUtils.createComboBox(new String[]{"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"});
-        monthBox.setSelectedItem(String.format("%02d", Calendar.getInstance().get(Calendar.MONTH) + 1));
-        controlPanel.add(monthBox);
-        
-        controlPanel.add(new JLabel("月 "));
-        
-        JButton refreshBtn = UIUtils.createButton("刷新数据");
-        refreshBtn.addActionListener(e -> refreshData());
-        controlPanel.add(Box.createHorizontalStrut(10));
-        controlPanel.add(refreshBtn);
-        
-        add(controlPanel, BorderLayout.SOUTH);
+        last6Months = new ArrayList<>();
+        Calendar cal = Calendar.getInstance();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM");
+        for (int i = 5; i >= 0; i--) {
+            Calendar c = (Calendar) cal.clone();
+            c.add(Calendar.MONTH, -i);
+            last6Months.add(sdf.format(c.getTime()));
+        }
 
-        JPanel contentPanel = new JPanel();
-        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
-        contentPanel.setBackground(UIUtils.COLOR_BG_MAIN);
-        contentPanel.setBorder(new EmptyBorder(24, 24, 24, 24));
-
-        // KPI 卡片行
         JPanel cardsPanel = new JPanel(new GridLayout(1, 4, 20, 0));
-        cardsPanel.setOpaque(false);
-        cardsPanel.setMaximumSize(new Dimension(2000, 140));
+        cardsPanel.setBackground(UIUtils.COLOR_BG_MAIN);
         
-        // 收入卡片 - 绿色
-        incomeLabel = createKPICard(cardsPanel, "本月总收入", "0.00 元", 
-            UIUtils.COLOR_SUCCESS_LIGHT, UIUtils.COLOR_SUCCESS);
-        expenseLabel = createKPICard(cardsPanel, "本月杂项支出", "0.00 元", 
-            UIUtils.COLOR_DANGER_LIGHT, UIUtils.COLOR_DANGER);
-        salaryLabel = createKPICard(cardsPanel, "预计薪资成本", "0.00 元", 
-            UIUtils.COLOR_WARNING_LIGHT, UIUtils.COLOR_WARNING);
-        profitLabel = createKPICard(cardsPanel, "本月净利润", "0.00 元", 
-            UIUtils.COLOR_PRIMARY_LIGHT, UIUtils.COLOR_PRIMARY);
-        
-        contentPanel.add(cardsPanel);
-        contentPanel.add(Box.createVerticalStrut(24));
+        incomeLabel = createKPICard(cardsPanel, "本月总收入(含注资)", "0.00 元", UIUtils.COLOR_SUCCESS_LIGHT, UIUtils.COLOR_SUCCESS, "INCOME");
+        expenseLabel = createKPICard(cardsPanel, "本月杂项支出", "0.00 元", UIUtils.COLOR_DANGER_LIGHT, UIUtils.COLOR_DANGER, "EXPENSE");
+        salaryLabel = createKPICard(cardsPanel, "预计薪资成本", "0.00 元", UIUtils.COLOR_WARNING_LIGHT, UIUtils.COLOR_WARNING, "SALARY");
+        profitLabel = createKPICard(cardsPanel, "本月净利润", "0.00 元", UIUtils.COLOR_PRIMARY_LIGHT, UIUtils.COLOR_PRIMARY, "PROFIT");
+
+        add(cardsPanel, BorderLayout.NORTH);
 
         chartPanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                drawCharts(g, getWidth(), getHeight());
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                clickableBars.clear();
+
+                int width = getWidth();
+                int height = getHeight();
+                int padding = 50;
+
+                g2d.setColor(UIUtils.COLOR_BORDER);
+                g2d.drawLine(padding, height - padding, width - padding, height - padding);
+                g2d.drawLine(padding, padding, padding, height - padding);
+
+                double maxVal = 1; 
+                double[] incomes = new double[6];
+                double[] expenses = new double[6];
+                double[] salaries = new double[6];
+
+                for (int i = 0; i < 6; i++) {
+                    String m = last6Months.get(i);
+                    for (SalesRecord s : DataManager.getInstance().getSalesRecords()) {
+                        if (s.getDate().startsWith(m)) incomes[i] += s.getTotalAmount();
+                    }
+                    for (ExpenseRecord e : DataManager.getInstance().getExpenseRecords()) {
+                        if (e.getDate().startsWith(m)) {
+                            if (isIncomeCategory(e.getCategory())) {
+                                incomes[i] += e.getAmount();
+                            } else {
+                                expenses[i] += e.getAmount();
+                            }
+                        }
+                    }
+                    for (Employee emp : DataManager.getInstance().getEmployees()) {
+                        salaries[i] += emp.getTotalSalary();
+                    }
+                    maxVal = Math.max(maxVal, Math.max(incomes[i], Math.max(expenses[i], salaries[i])));
+                }
+
+                int barWidth = 20;
+                int spacing = 15;
+                int groupWidth = barWidth * 3 + spacing * 2;
+                int availableWidth = width - 2 * padding;
+                int groupSpacing = availableWidth / 6;
+
+                for (int i = 0; i < 6; i++) {
+                    int xBase = padding + i * groupSpacing + (groupSpacing - groupWidth) / 2;
+                    
+                    int hIncome = (int) ((incomes[i] / maxVal) * (height - 2 * padding));
+                    g2d.setColor(UIUtils.COLOR_SUCCESS);
+                    g2d.fillRect(xBase, height - padding - hIncome, barWidth, hIncome);
+                    clickableBars.add(new BarRegion(new Rectangle(xBase, height - padding - hIncome, barWidth, hIncome), last6Months.get(i), "INCOME"));
+
+                    int hExpense = (int) ((expenses[i] / maxVal) * (height - 2 * padding));
+                    g2d.setColor(UIUtils.COLOR_DANGER);
+                    g2d.fillRect(xBase + barWidth + spacing, height - padding - hExpense, barWidth, hExpense);
+                    clickableBars.add(new BarRegion(new Rectangle(xBase + barWidth + spacing, height - padding - hExpense, barWidth, hExpense), last6Months.get(i), "EXPENSE"));
+
+                    int hSalary = (int) ((salaries[i] / maxVal) * (height - 2 * padding));
+                    g2d.setColor(UIUtils.COLOR_WARNING);
+                    g2d.fillRect(xBase + 2 * (barWidth + spacing), height - padding - hSalary, barWidth, hSalary);
+                    clickableBars.add(new BarRegion(new Rectangle(xBase + 2 * (barWidth + spacing), height - padding - hSalary, barWidth, hSalary), last6Months.get(i), "SALARY"));
+
+                    g2d.setColor(UIUtils.COLOR_TEXT_SECONDARY);
+                    g2d.setFont(new Font("Dialog", Font.PLAIN, 12));
+                    g2d.drawString(last6Months.get(i), xBase + 5, height - padding + 20);
+                }
             }
         };
-        chartPanel.setBackground(UIUtils.COLOR_BG_CARD);
+        
+        chartPanel.setBackground(Color.WHITE);
         chartPanel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(UIUtils.COLOR_BORDER),
-            new EmptyBorder(20, 20, 20, 20)
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
-        chartPanel.setPreferredSize(new Dimension(0, 280));
-        chartPanel.setMaximumSize(new Dimension(2000, 280));
+        
         chartPanel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        chartPanel.addMouseListener(new java.awt.event.MouseAdapter() {
+        chartPanel.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
+            public void mouseClicked(MouseEvent e) {
                 for (BarRegion bar : clickableBars) {
                     if (bar.bounds.contains(e.getPoint())) {
                         showDetailDialog(bar.month, bar.type);
@@ -105,277 +129,94 @@ public class SummaryPanel extends JPanel {
                 }
             }
         });
-        
-        JLabel chartTitle = new JLabel("收支可视化分析");
-        chartTitle.setFont(UIUtils.FONT_SUBHEADING);
-        chartTitle.setForeground(UIUtils.COLOR_TEXT_PRIMARY);
-        chartTitle.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
-        
-        JPanel chartContainer = new JPanel(new BorderLayout(0, 10));
-        chartContainer.setOpaque(false);
-        chartContainer.add(chartTitle, BorderLayout.NORTH);
-        chartContainer.add(chartPanel, BorderLayout.CENTER);
-        
-        contentPanel.add(chartContainer);
-        contentPanel.add(Box.createVerticalStrut(24));
 
-        // 运营数据摘要
-        JPanel statsPanel = new JPanel(new GridLayout(1, 3, 20, 0));
-        statsPanel.setOpaque(false);
-        statsPanel.setMaximumSize(new Dimension(2000, 100));
-        
-        empCountLabel = createStatCard(statsPanel, "在职员工", "0 人", UIUtils.COLOR_PRIMARY);
-        salesCountLabel = createStatCard(statsPanel, "本月订单", "0 单", UIUtils.COLOR_SUCCESS);
-        abnormalLabel = createStatCard(statsPanel, "考勤异常", "0 人次", UIUtils.COLOR_DANGER);
-        
-        JLabel statsTitle = new JLabel("运营数据摘要");
-        statsTitle.setFont(UIUtils.FONT_SUBHEADING);
-        statsTitle.setForeground(UIUtils.COLOR_TEXT_PRIMARY);
-        statsTitle.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
-        
-        JPanel statsContainer = new JPanel(new BorderLayout(0, 10));
-        statsContainer.setOpaque(false);
-        statsContainer.add(statsTitle, BorderLayout.NORTH);
-        statsContainer.add(statsPanel, BorderLayout.CENTER);
-        
-        contentPanel.add(statsContainer);
-
-        add(new JScrollPane(contentPanel), BorderLayout.CENTER);
-        
+        add(chartPanel, BorderLayout.CENTER);
         refreshData();
     }
-    
-    /**
-     * 创建 KPI 卡片 - 现代风格
-     */
-    private JLabel createKPICard(JPanel parent, String title, String value, Color bgColor, Color accentColor) {
-        JPanel card = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                
-                // 背景
-                g2.setColor(bgColor);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), UIUtils.RADIUS_MEDIUM, UIUtils.RADIUS_MEDIUM);
-                
-                // 左侧强调条
-                g2.setColor(accentColor);
-                g2.fillRoundRect(0, 0, 4, getHeight(), UIUtils.RADIUS_SMALL, UIUtils.RADIUS_SMALL);
-                
-                g2.dispose();
-            }
-        };
-        
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setOpaque(false);
-        card.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        
-        // 标题
-        JLabel tLabel = new JLabel(title);
-        tLabel.setFont(UIUtils.FONT_BODY);
-        tLabel.setForeground(UIUtils.COLOR_TEXT_SECONDARY);
-        tLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        
-        // 值
-        JLabel vLabel = new JLabel(value);
-        vLabel.setFont(UIUtils.FONT_NUMBER);
-        vLabel.setForeground(accentColor);
-        vLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        vLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-        
-        card.add(tLabel);
-        card.add(vLabel);
-        parent.add(card);
-        
-        return vLabel;
+
+    private boolean isIncomeCategory(String category) {
+        if (category == null) return false;
+        return category.contains("(收入)") 
+            || category.contains("注资") 
+            || category.contains("注入") 
+            || category.contains("投资注入") 
+            || category.contains("补贴");
     }
-    
-    /**
-     * 创建统计卡片
-     */
-    private JLabel createStatCard(JPanel parent, String title, String value, Color accentColor) {
-        JPanel card = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                
-                g2.setColor(UIUtils.COLOR_BG_CARD);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), UIUtils.RADIUS_MEDIUM, UIUtils.RADIUS_MEDIUM);
-                
-                // 底部强调线
-                g2.setColor(accentColor);
-                g2.fillRect(0, getHeight() - 3, getWidth(), 3);
-                
-                g2.dispose();
-            }
-        };
-        
-        card.setLayout(new BorderLayout(15, 0));
-        card.setOpaque(false);
-        card.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
-        
+
+    private JLabel createKPICard(JPanel parent, String title, String value, Color bgColor, Color fgColor, String clickType) {
+        JPanel card = new JPanel(new BorderLayout(10, 10));
+        card.setBackground(bgColor);
+        card.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
         JLabel tLabel = new JLabel(title);
-        tLabel.setFont(UIUtils.FONT_BODY);
-        tLabel.setForeground(UIUtils.COLOR_TEXT_SECONDARY);
+        tLabel.setFont(new Font("Dialog", Font.BOLD, 16));
+        tLabel.setForeground(fgColor);
         
         JLabel vLabel = new JLabel(value);
         vLabel.setFont(new Font("Dialog", Font.BOLD, 32));
-        vLabel.setForeground(UIUtils.COLOR_TEXT_PRIMARY);
-        
+        vLabel.setForeground(fgColor);
+
         card.add(tLabel, BorderLayout.NORTH);
         card.add(vLabel, BorderLayout.CENTER);
-        parent.add(card);
         
+        if (clickType != null) {
+            card.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            card.setToolTipText("点击查看本月明细");
+            card.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    String currentMonth = new SimpleDateFormat("yyyy-MM").format(new Date());
+                    showDetailDialog(currentMonth, clickType);
+                }
+            });
+        }
+        
+        parent.add(card);
         return vLabel;
     }
 
-    private double currentIncome = 0;
-    private double currentExpense = 0;
-    private double currentSalary = 0;
-
     public void refreshData() {
-        String year = (String) yearBox.getSelectedItem();
-        String month = (String) monthBox.getSelectedItem();
-        String datePrefix = year + "-" + month;
+        String currentMonth = new SimpleDateFormat("yyyy-MM").format(new Date());
 
-        List<SalesRecord> sales = DataManager.getInstance().getSalesRecords();
-        currentIncome = sales.stream()
-                .filter(s -> s.getDate().startsWith(datePrefix))
-                .mapToDouble(SalesRecord::getTotalAmount)
-                .sum();
-        
-        List<ExpenseRecord> expenses = DataManager.getInstance().getExpenseRecords();
-        currentExpense = expenses.stream()
-                .filter(e -> e.getDate().startsWith(datePrefix))
-                .mapToDouble(ExpenseRecord::getAmount)
-                .sum();
-        
-        List<Employee> employees = DataManager.getInstance().getEmployees();
-        currentSalary = employees.stream().mapToDouble(Employee::getTotalSalary).sum();
-        
-        long orderCount = sales.stream().filter(s -> s.getDate().startsWith(datePrefix)).count();
-        long abnormalCount = 0;
+        double currentIncome = 0;
+        for (SalesRecord s : DataManager.getInstance().getSalesRecords()) {
+            if (s.getDate().startsWith(currentMonth)) currentIncome += s.getTotalAmount();
+        }
 
-        incomeLabel.setText(String.format("%.2f 元", currentIncome));
+        double currentExpense = 0;
+        double otherIncome = 0;
+        for (ExpenseRecord e : DataManager.getInstance().getExpenseRecords()) {
+            if (e.getDate().startsWith(currentMonth)) {
+                if (isIncomeCategory(e.getCategory())) {
+                    otherIncome += e.getAmount(); 
+                } else {
+                    currentExpense += e.getAmount(); 
+                }
+            }
+        }
+
+        double currentSalary = 0;
+        for (Employee emp : DataManager.getInstance().getEmployees()) {
+            currentSalary += emp.getTotalSalary();
+        }
+
+        double totalRevenue = currentIncome + otherIncome;
+        double profit = totalRevenue - currentExpense - currentSalary;
+
+        incomeLabel.setText(String.format("%.2f 元", totalRevenue));
         expenseLabel.setText(String.format("%.2f 元", currentExpense));
         salaryLabel.setText(String.format("%.2f 元", currentSalary));
-        
-        double profit = currentIncome - currentExpense - currentSalary;
         profitLabel.setText(String.format("%.2f 元", profit));
-        if (profit >= 0) {
-            profitLabel.setForeground(UIUtils.COLOR_PRIMARY);
-        } else {
-            profitLabel.setForeground(UIUtils.COLOR_DANGER);
-        }
-        
-        empCountLabel.setText(String.valueOf(employees.size()) + " 人");
-        salesCountLabel.setText(String.valueOf(orderCount) + " 单");
-        abnormalLabel.setText(String.valueOf(abnormalCount) + " 人次");
-        
+
         chartPanel.repaint();
-    }
-    
-    private void drawCharts(Graphics g, int w, int h) {
-        Graphics2D g2d = (Graphics2D) g;
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        
-        clickableBars.clear();
-        
-        if (currentIncome == 0 && currentExpense == 0 && currentSalary == 0) {
-            g2d.setColor(UIUtils.COLOR_TEXT_SECONDARY);
-            g2d.setFont(UIUtils.FONT_BODY);
-            FontMetrics fm = g2d.getFontMetrics();
-            String msg = "暂无数据，请添加销售记录";
-            g2d.drawString(msg, (w - fm.stringWidth(msg)) / 2, h / 2);
-            return;
-        }
-        
-        double max = Math.max(currentIncome, Math.max(currentExpense, currentSalary));
-        if (max == 0) max = 1;
-        
-        int barWidth = 80;
-        int spacing = 60;
-        int startX = (w - (3 * barWidth + 2 * spacing)) / 2;
-        int baseline = h - 40;
-        int maxHeight = h - 80;
-        
-        String year = (String) yearBox.getSelectedItem();
-        String month = (String) monthBox.getSelectedItem();
-        String currentMonth = year + "-" + month;
-        
-        drawBar(g2d, startX, baseline, maxHeight, barWidth, currentIncome, max, UIUtils.COLOR_SUCCESS, "收入", currentMonth, "INCOME");
-        drawBar(g2d, startX + barWidth + spacing, baseline, maxHeight, barWidth, currentExpense, max, UIUtils.COLOR_DANGER, "支出", currentMonth, "EXPENSE");
-        drawBar(g2d, startX + 2 * (barWidth + spacing), baseline, maxHeight, barWidth, currentSalary, max, UIUtils.COLOR_WARNING, "薪资", currentMonth, "SALARY");
-        
-        drawLegend(g2d, 20, 20);
-    }
-    
-    private void drawBar(Graphics2D g, int x, int y, int maxH, int w, double val, double maxVal, Color c, String label, String month, String type) {
-        int h = (int) ((val / maxVal) * maxH);
-        h = Math.max(h, 10);
-        
-        g.setColor(c);
-        g.fillRoundRect(x, y - h, w, h, UIUtils.RADIUS_SMALL, UIUtils.RADIUS_SMALL);
-        
-        clickableBars.add(new BarRegion(new Rectangle(x, y - h, w, h), month, type));
-        
-        g.setColor(UIUtils.COLOR_TEXT_SECONDARY);
-        g.setFont(UIUtils.FONT_SMALL);
-        FontMetrics fm = g.getFontMetrics();
-        int labelW = fm.stringWidth(label);
-        g.drawString(label, x + (w - labelW) / 2, y + 20);
-        
-        String valStr = String.format("%.0f", val);
-        g.setColor(UIUtils.COLOR_TEXT_PRIMARY);
-        g.setFont(UIUtils.FONT_BODY_BOLD);
-        fm = g.getFontMetrics();
-        int valW = fm.stringWidth(valStr);
-        g.drawString(valStr, x + (w - valW) / 2, y - h - 8);
-    }
-    
-    private void drawLegend(Graphics2D g, int x, int y) {
-        g.setFont(UIUtils.FONT_SMALL);
-        
-        // 收入
-        g.setColor(UIUtils.COLOR_SUCCESS);
-        g.fillRect(x, y, 12, 12);
-        g.setColor(UIUtils.COLOR_TEXT_SECONDARY);
-        g.drawString("收入", x + 18, y + 10);
-        
-        // 支出
-        x += 80;
-        g.setColor(UIUtils.COLOR_DANGER);
-        g.fillRect(x, y, 12, 12);
-        g.setColor(UIUtils.COLOR_TEXT_SECONDARY);
-        g.drawString("支出", x + 18, y + 10);
-        
-        // 薪资
-        x += 80;
-        g.setColor(UIUtils.COLOR_WARNING);
-        g.fillRect(x, y, 12, 12);
-        g.setColor(UIUtils.COLOR_TEXT_SECONDARY);
-        g.drawString("薪资", x + 18, y + 10);
-    }
-
-    private class BarRegion {
-        Rectangle bounds;
-        String month;
-        String type;
-
-        public BarRegion(Rectangle bounds, String month, String type) {
-            this.bounds = bounds;
-            this.month = month;
-            this.type = type;
-        }
     }
 
     private void showDetailDialog(String month, String type) {
         String title;
-        if (type.equals("INCOME")) title = month + " 收入明细";
+        if (type.equals("INCOME")) title = month + " 收入明细(含注资)";
         else if (type.equals("EXPENSE")) title = month + " 杂项支出明细";
-        else title = month + " 预计薪资成本明细";
+        else if (type.equals("SALARY")) title = month + " 预计薪资成本明细";
+        else title = month + " 净利润核算账单";
 
         JDialog dialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), title, true);
         dialog.setSize(750, 450);
@@ -386,26 +227,37 @@ public class SummaryPanel extends JPanel {
         javax.swing.table.DefaultTableModel model;
 
         if (type.equals("INCOME")) {
-            cols = new String[]{"日期", "客户/收货方", "商品", "单价(元)", "数量", "总金额(元)", "经手人"};
+            cols = new String[]{"日期", "类型/货主", "单价/详情", "数量/权重", "总额(元)", "经手人"};
             model = new javax.swing.table.DefaultTableModel(cols, 0) {
                 @Override public boolean isCellEditable(int r, int c) { return false; }
             };
-            for (com.jinwanli.model.SalesRecord s : DataManager.getInstance().getSalesRecords()) {
+            
+            for (SalesRecord s : DataManager.getInstance().getSalesRecords()) {
                 if (s.getDate().startsWith(month)) {
                     model.addRow(new Object[]{
-                        s.getDate(), s.getShipperName(), s.getProductName(), 
-                        String.format("%.2f", s.getPricePerJin()), s.getBasketCount(), 
+                        s.getDate(), "【出货】" + s.getShipperName(), 
+                        String.format("%.2f 元/斤", s.getUnitPrice()), 
+                        s.getTotalWeight() + " 斤", 
                         String.format("%.2f", s.getTotalAmount()), s.getHandler()
                     });
                 }
             }
+            for (ExpenseRecord e : DataManager.getInstance().getExpenseRecords()) {
+                if (e.getDate().startsWith(month) && isIncomeCategory(e.getCategory())) {
+                    model.addRow(new Object[]{
+                        e.getDate(), "【" + e.getCategory() + "】", 
+                        e.getUsage(), "-", 
+                        String.format("%.2f", e.getAmount()), e.getHandler()
+                    });
+                }
+            }
         } else if (type.equals("EXPENSE")) {
-            cols = new String[]{"日期", "分类", "投资项目", "金额(元)", "用途", "经手人"};
+            cols = new String[]{"日期", "分类", "关联项目", "金额(元)", "用途", "经手人"};
             model = new javax.swing.table.DefaultTableModel(cols, 0) {
                 @Override public boolean isCellEditable(int r, int c) { return false; }
             };
-            for (com.jinwanli.model.ExpenseRecord e : DataManager.getInstance().getExpenseRecords()) {
-                if (e.getDate().startsWith(month)) {
+            for (ExpenseRecord e : DataManager.getInstance().getExpenseRecords()) {
+                if (e.getDate().startsWith(month) && !isIncomeCategory(e.getCategory())) {
                     model.addRow(new Object[]{
                         e.getDate(), e.getCategory(), 
                         (e.getTargetProject() == null || e.getTargetProject().isEmpty()) ? "-" : e.getTargetProject(),
@@ -413,36 +265,69 @@ public class SummaryPanel extends JPanel {
                     });
                 }
             }
-        } else {
+        } else if (type.equals("SALARY")) {
             cols = new String[]{"姓名", "职位", "联系电话", "基本工资(元)", "绩效(元)", "加班补贴(元)", "预计总薪资(元)"};
             model = new javax.swing.table.DefaultTableModel(cols, 0) {
                 @Override public boolean isCellEditable(int r, int c) { return false; }
             };
-            for (com.jinwanli.model.Employee emp : DataManager.getInstance().getEmployees()) {
+            for (Employee emp : DataManager.getInstance().getEmployees()) {
                 model.addRow(new Object[]{
-                    emp.getName(), 
-                    emp.getPosition(), 
-                    emp.getPhone(),
+                    emp.getName(), emp.getPosition(), emp.getPhone(),
                     String.format("%.2f", emp.getBaseSalary()), 
                     String.format("%.2f", emp.getPerformanceSalary()), 
                     String.format("%.2f", emp.getOvertimeSalary()), 
                     String.format("%.2f", emp.getTotalSalary())
                 });
             }
+        } else {
+            cols = new String[]{"核算项目", "金额(元)", "说明"};
+            model = new javax.swing.table.DefaultTableModel(cols, 0) {
+                @Override public boolean isCellEditable(int r, int c) { return false; }
+            };
+            
+            double totalInc = 0;
+            for (SalesRecord s : DataManager.getInstance().getSalesRecords()) {
+                if (s.getDate().startsWith(month)) totalInc += s.getTotalAmount();
+            }
+            for (ExpenseRecord e : DataManager.getInstance().getExpenseRecords()) {
+                if (e.getDate().startsWith(month) && isIncomeCategory(e.getCategory())) totalInc += e.getAmount();
+            }
+            
+            double totalExp = 0;
+            for (ExpenseRecord e : DataManager.getInstance().getExpenseRecords()) {
+                if (e.getDate().startsWith(month) && !isIncomeCategory(e.getCategory())) totalExp += e.getAmount();
+            }
+            
+            double totalSal = 0;
+            for (Employee emp : DataManager.getInstance().getEmployees()) {
+                totalSal += emp.getTotalSalary();
+            }
+            
+            model.addRow(new Object[]{"【+】本月总收入(含注资)", String.format("%.2f", totalInc), "包含农产品出货营业额与各类注资补贴"});
+            model.addRow(new Object[]{"【-】本月杂项支出", String.format("%.2f", totalExp), "日常运营各类开销"});
+            model.addRow(new Object[]{"【-】预计薪资成本", String.format("%.2f", totalSal), "系统录入的所有员工薪资总计"});
+            model.addRow(new Object[]{"【=】本月净利润", String.format("%.2f", totalInc - totalExp - totalSal), "当月最终核算利润结余"});
         }
 
         JTable table = new JTable(model);
         table.setRowHeight(30);
-        table.setFont(UIUtils.FONT_NORMAL);
+        table.setFont(new Font("Dialog", Font.PLAIN, 14));
         
         dialog.add(new JScrollPane(table), BorderLayout.CENTER);
         
         JPanel btnPanel = new JPanel();
-        JButton closeBtn = UIUtils.createSecondaryButton("关闭");
+        JButton closeBtn = new JButton("关闭");
         closeBtn.addActionListener(e -> dialog.setVisible(false));
         btnPanel.add(closeBtn);
         dialog.add(btnPanel, BorderLayout.SOUTH);
 
         dialog.setVisible(true);
+    }
+
+    private class BarRegion {
+        Rectangle bounds; String month; String type;
+        public BarRegion(Rectangle bounds, String month, String type) {
+            this.bounds = bounds; this.month = month; this.type = type;
+        }
     }
 }

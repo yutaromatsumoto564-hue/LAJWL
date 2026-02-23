@@ -199,7 +199,7 @@ public class AttendancePanel extends JPanel {
         return panel;
     }
 
-    public void refreshMonthlyTable() {
+    private void refreshMonthlyTable() {
         monthlyModel.setRowCount(0);
 
         String year = (String) yearBox.getSelectedItem();

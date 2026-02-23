@@ -209,12 +209,12 @@ public class BackupManager {
                     .collect(Collectors.toList());
 
             if (!dailySales.isEmpty()) {
-                int dailyQty = dailySales.stream().mapToInt(SalesRecord::getBasketCount).sum();
+                double dailyWeight = dailySales.stream().mapToDouble(SalesRecord::getTotalWeight).sum();
                 double dailyTotal = dailySales.stream().mapToDouble(SalesRecord::getTotalAmount).sum();
                 
-                row.getCell(1).setCellValue(dailyQty);
-                if (dailyQty > 0) {
-                    double avgPrice = dailyTotal / dailyQty;
+                row.getCell(1).setCellValue(dailyWeight);
+                if (dailyWeight > 0) {
+                    double avgPrice = dailyTotal / dailyWeight;
                     row.getCell(2).setCellValue(String.format("%.2f", avgPrice));
                 }
                 row.getCell(3).setCellValue(dailyTotal);

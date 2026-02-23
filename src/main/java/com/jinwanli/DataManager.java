@@ -100,7 +100,7 @@ public class DataManager {
         }
     }
     
-    private void saveSales() { saveList(salesRecords, "sales.dat"); }
+    public void saveSales() { saveList(salesRecords, "sales.dat"); }
 
     // ========== 开支管理 ==========
     public List<ExpenseRecord> getExpenseRecords() { return expenseRecords; }
@@ -121,7 +121,7 @@ public class DataManager {
         }
     }
     
-    private void saveExpenses() { saveList(expenseRecords, "expenses.dat"); }
+    public void saveExpenses() { saveList(expenseRecords, "expenses.dat"); }
 
     // ========== 考勤管理 ==========
     public List<AttendanceRecord> getAttendanceRecords() { return attendanceRecords; }

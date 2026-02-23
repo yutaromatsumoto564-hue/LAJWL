@@ -9,11 +9,7 @@ public class MainFrame extends JFrame {
     private JPanel navPanel;
     private String currentPage = "SUMMARY";
     
-    private SummaryPanel summaryPanel;
-    private AttendancePanel attendancePanel;
-    private SalesPanel salesPanel;
-    private ExpensePanel expensePanel;
-    
+    // 导航按钮
     private JButton summaryBtn, attendanceBtn, salesBtn, expenseBtn, backupBtn, exitBtn;
 
     public MainFrame() {
@@ -25,26 +21,24 @@ public class MainFrame extends JFrame {
         
         setLayout(new BorderLayout());
         
+        // 1. 左侧导航栏（深色）
         navPanel = createNavPanel();
         add(navPanel, BorderLayout.WEST);
         
+        // 2. 顶部标题栏
         JPanel topPanel = createTopPanel();
         add(topPanel, BorderLayout.NORTH);
         
+        // 3. 主内容区域
         contentPanel = new JPanel();
         cardLayout = new CardLayout();
         contentPanel.setLayout(cardLayout);
         contentPanel.setBackground(UIUtils.COLOR_BG_MAIN);
         
-        summaryPanel = new SummaryPanel();
-        attendancePanel = new AttendancePanel();
-        salesPanel = new SalesPanel();
-        expensePanel = new ExpensePanel();
-        
-        contentPanel.add(summaryPanel, "SUMMARY");
-        contentPanel.add(attendancePanel, "ATTENDANCE");
-        contentPanel.add(salesPanel, "SALES");
-        contentPanel.add(expensePanel, "EXPENSE");
+        contentPanel.add(new SummaryPanel(), "SUMMARY");
+        contentPanel.add(new AttendancePanel(), "ATTENDANCE");
+        contentPanel.add(new SalesPanel(), "SALES");
+        contentPanel.add(new ExpensePanel(), "EXPENSE");
         
         add(contentPanel, BorderLayout.CENTER);
         
@@ -61,6 +55,7 @@ public class MainFrame extends JFrame {
         leftPanel.setOpaque(false);
         leftPanel.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 0));
         
+        // 使用文本图标
         JLabel logoLabel = new JLabel("[JWL]");
         logoLabel.setFont(new Font("Arial", Font.BOLD, 20));
         logoLabel.setForeground(UIUtils.COLOR_PRIMARY);
@@ -94,6 +89,7 @@ public class MainFrame extends JFrame {
         navPanel.setPreferredSize(new Dimension(240, 0));
         navPanel.setLayout(new BoxLayout(navPanel, BoxLayout.Y_AXIS));
         
+        // Logo 区域
         JPanel logoPanel = new JPanel();
         logoPanel.setOpaque(false);
         logoPanel.setMaximumSize(new Dimension(240, 80));
@@ -110,11 +106,12 @@ public class MainFrame extends JFrame {
         
         navPanel.add(logoPanel);
         
+        // 导航按钮区域
         navPanel.add(createNavSection("导航菜单", new JComponent[] {
             summaryBtn = createNavButton("经营总览", "SUMMARY"),
             attendanceBtn = createNavButton("员工考勤", "ATTENDANCE"),
             salesBtn = createNavButton("销量统计", "SALES"),
-            expenseBtn = createNavButton("财务收支", "EXPENSE") 
+            expenseBtn = createNavButton("开支管理", "EXPENSE")
         }));
         
         navPanel.add(Box.createVerticalGlue());
@@ -201,17 +198,9 @@ public class MainFrame extends JFrame {
             default:
                 cardLayout.show(contentPanel, action);
                 currentPage = action;
-                
-                if ("SUMMARY".equals(action)) {
-                    summaryPanel.refreshData();
-                } else if ("ATTENDANCE".equals(action)) {
-                    attendancePanel.refreshMonthlyTable();
-                } else if ("SALES".equals(action)) {
-                    salesPanel.refreshData();
-                } else if ("EXPENSE".equals(action)) {
-                    expensePanel.refreshData();
-                }
                 break;
         }
     }
+
 }
+

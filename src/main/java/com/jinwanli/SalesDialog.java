@@ -7,11 +7,11 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class SalesDialog extends JDialog {
-    private JTextField customerField, productField, priceField, qtyField, handlerField, dateField;
+    private JTextField shipperField, priceField, weightField, basketField, handlerField, dateField;
     private boolean confirmed = false;
 
     public SalesDialog(JFrame parent) {
-        super(parent, "新增销售记录", true);
+        super(parent, "新增销量记录", true);
         setLayout(new BorderLayout());
         setSize(450, 550);
         setLocationRelativeTo(parent);
@@ -19,7 +19,7 @@ public class SalesDialog extends JDialog {
 
         JPanel titlePanel = new JPanel();
         titlePanel.setBackground(UIUtils.COLOR_PRIMARY);
-        JLabel titleLabel = new JLabel("录入销售订单");
+        JLabel titleLabel = new JLabel("录入销量记录");
         titleLabel.setFont(UIUtils.FONT_HEADING);
         titleLabel.setForeground(Color.WHITE);
         titlePanel.add(titleLabel);
@@ -33,17 +33,17 @@ public class SalesDialog extends JDialog {
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         int row = 0;
-        customerField = UIUtils.createTextField();
-        addFormRow(formPanel, gbc, row++, "客户/收货方:", customerField);
-        
-        productField = UIUtils.createTextField();
-        addFormRow(formPanel, gbc, row++, "商品/型号:", productField);
+        shipperField = UIUtils.createTextField();
+        addFormRow(formPanel, gbc, row++, "货主:", shipperField);
         
         priceField = UIUtils.createTextField();
-        addFormRow(formPanel, gbc, row++, "单价(元):", priceField);
+        addFormRow(formPanel, gbc, row++, "单价(元/斤):", priceField);
         
-        qtyField = UIUtils.createTextField();
-        addFormRow(formPanel, gbc, row++, "数量:", qtyField);
+        weightField = UIUtils.createTextField();
+        addFormRow(formPanel, gbc, row++, "每筐重量(斤):", weightField);
+        
+        basketField = UIUtils.createTextField();
+        addFormRow(formPanel, gbc, row++, "筐数(个):", basketField);
         
         handlerField = UIUtils.createTextField();
         addFormRow(formPanel, gbc, row++, "经手人:", handlerField);
@@ -59,7 +59,7 @@ public class SalesDialog extends JDialog {
         JButton saveBtn = UIUtils.createButton("保存");
         saveBtn.setPreferredSize(new Dimension(100, 36));
         saveBtn.addActionListener(e -> {
-            if(customerField.getText().trim().isEmpty() || priceField.getText().trim().isEmpty()) {
+            if(shipperField.getText().trim().isEmpty() || priceField.getText().trim().isEmpty()) {
                 JOptionPane.showMessageDialog(this, "必填项不能为空！", "提示", JOptionPane.WARNING_MESSAGE);
                 return;
             }
@@ -91,20 +91,24 @@ public class SalesDialog extends JDialog {
         if (!confirmed) return null;
         try {
             double price = Double.parseDouble(priceField.getText().trim());
-            int qty = Integer.parseInt(qtyField.getText().trim());
-            double total = price * qty;
+            double weight = Double.parseDouble(weightField.getText().trim());
+            int baskets = Integer.parseInt(basketField.getText().trim());
+            
+            double totalWeight = weight * baskets;
+            double totalAmount = totalWeight * price;
             
             return new SalesRecord(
                 dateField.getText().trim(),
-                customerField.getText().trim(),
-                productField.getText().trim(),
+                shipperField.getText().trim(),
                 price,
-                qty,
-                total,
+                weight,
+                baskets,
+                totalWeight,
+                totalAmount,
                 handlerField.getText().trim()
             );
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "单价和数量必须输入数字！", "错误", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "单价、重量和筐数必须输入数字！", "错误", JOptionPane.ERROR_MESSAGE);
             return null;
         }
     }
