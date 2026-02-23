@@ -14,6 +14,9 @@ import com.jinwanli.model.*;
 
 public class BackupManager {
 
+    /**
+     * 按指定年份和月份执行备份，生成高度还原模板的考勤表和账目表
+     */
     public static void performBackup(String year, String month) {
         try {
             File backupDir = new File("backup");
@@ -32,6 +35,9 @@ public class BackupManager {
         }
     }
 
+    // =========================================================================
+    // 生成考勤表 (全包围边框 + 横向/纵向双维度公式总计)
+    // =========================================================================
     private static void exportAttendance(String fileName, String year, String month) throws Exception {
         Workbook wb = new XSSFWorkbook();
         Sheet sheet = wb.createSheet("考勤表");
@@ -58,7 +64,7 @@ public class BackupManager {
         boldFont.setBold(true);
         headerStyle.setFont(boldFont);
         headerStyle.setWrapText(true);
-
+        
         Row row0 = sheet.createRow(0);
         row0.setHeightInPoints(30);
         Cell titleCell = row0.createCell(0);
@@ -68,7 +74,7 @@ public class BackupManager {
 
         Row row1 = sheet.createRow(1);
         row1.createCell(0).setCellValue("（ " + month + " ） 月");
-        sheet.createRow(2);
+        sheet.createRow(2); 
 
         Row row3 = sheet.createRow(3);
         row3.setHeightInPoints(25);
@@ -134,7 +140,7 @@ public class BackupManager {
                 }
             }
             
-            int excelRowIndex = rowIndex;
+            int excelRowIndex = rowIndex; 
             dataRow.getCell(33).setCellFormula("SUM(C" + excelRowIndex + ":AG" + excelRowIndex + ")");
         }
 
@@ -159,6 +165,9 @@ public class BackupManager {
         wb.close();
     }
 
+    // =========================================================================
+    // 生成账目表 (独立分行展示 + 日期自动合并 + 动态公式求和)
+    // =========================================================================
     private static void exportAccount(String fileName, String year, String month) throws Exception {
         Workbook wb = new XSSFWorkbook();
         Sheet sheet = wb.createSheet("账目");
@@ -177,61 +186,88 @@ public class BackupManager {
         boldFont.setBold(true);
         headerStyle.setFont(boldFont);
 
+        // 【修改1】增加"货主"列，由之前的 4 列扩展为 5 列 (索引0~4)
         Row headerRow = sheet.createRow(0);
-        for (int c = 0; c <= 3; c++) {
+        for (int c = 0; c <= 4; c++) {
             headerRow.createCell(c).setCellStyle(headerStyle);
         }
         headerRow.getCell(0).setCellValue("（ " + month + " ）月");
-        headerRow.getCell(1).setCellValue("出货重量/数量");
-        headerRow.getCell(2).setCellValue("单价");
-        headerRow.getCell(3).setCellValue("总额");
+        headerRow.getCell(1).setCellValue("货主");
+        headerRow.getCell(2).setCellValue("出货重量");
+        headerRow.getCell(3).setCellValue("单价");
+        headerRow.getCell(4).setCellValue("总额");
 
-        sheet.setColumnWidth(0, 12 * 256);
-        sheet.setColumnWidth(1, 16 * 256);
-        sheet.setColumnWidth(2, 12 * 256);
-        sheet.setColumnWidth(3, 15 * 256);
+        sheet.setColumnWidth(0, 10 * 256); // 日期
+        sheet.setColumnWidth(1, 15 * 256); // 货主
+        sheet.setColumnWidth(2, 15 * 256); // 重量
+        sheet.setColumnWidth(3, 12 * 256); // 单价
+        sheet.setColumnWidth(4, 15 * 256); // 总额
 
         List<SalesRecord> monthSales = DataManager.getInstance().getSalesRecords().stream()
                 .filter(s -> s.getDate().startsWith(year + "-" + month))
                 .collect(Collectors.toList());
 
+        int rowIndex = 1; // 数据从第2行（索引1）开始
+
+        // 1 到 31 号的每日数据
         for (int i = 1; i <= 31; i++) {
-            Row row = sheet.createRow(i);
-            for (int c = 0; c <= 3; c++) {
-                row.createCell(c).setCellStyle(borderStyle);
-            }
-            
-            row.getCell(0).setCellValue(i); 
-            
             String targetDate = year + "-" + month + "-" + String.format("%02d", i);
             List<SalesRecord> dailySales = monthSales.stream()
                     .filter(s -> s.getDate().equals(targetDate))
                     .collect(Collectors.toList());
 
-            if (!dailySales.isEmpty()) {
-                double dailyWeight = dailySales.stream().mapToDouble(SalesRecord::getTotalWeight).sum();
-                double dailyTotal = dailySales.stream().mapToDouble(SalesRecord::getTotalAmount).sum();
-                
-                row.getCell(1).setCellValue(dailyWeight);
-                if (dailyWeight > 0) {
-                    double avgPrice = dailyTotal / dailyWeight;
-                    row.getCell(2).setCellValue(String.format("%.2f", avgPrice));
+            if (dailySales.isEmpty()) {
+                // 当天无数据，生成一行空记录
+                Row row = sheet.createRow(rowIndex++);
+                for (int c = 0; c <= 4; c++) {
+                    row.createCell(c).setCellStyle(borderStyle);
                 }
-                row.getCell(3).setCellValue(dailyTotal);
+                row.getCell(0).setCellValue(i);
+                row.getCell(4).setCellValue(0); // 空白天数总额填 0
             } else {
-                row.getCell(3).setCellValue(0);
+                // 【修改2】当天有多笔数据，分行遍历写入
+                int firstRowOfDay = rowIndex;
+                for (int j = 0; j < dailySales.size(); j++) {
+                    SalesRecord s = dailySales.get(j);
+                    Row row = sheet.createRow(rowIndex++);
+                    
+                    for (int c = 0; c <= 4; c++) {
+                        row.createCell(c).setCellStyle(borderStyle);
+                    }
+
+                    // 第一行才写入日期数字
+                    if (j == 0) {
+                        row.getCell(0).setCellValue(i);
+                    }
+                    
+                    // 填入真实的单笔交易数据
+                    row.getCell(1).setCellValue(s.getShipperName());
+                    row.getCell(2).setCellValue(s.getTotalWeight());
+                    row.getCell(3).setCellValue(s.getUnitPrice());
+                    row.getCell(4).setCellValue(s.getTotalAmount());
+                }
+                
+                // 【修改3】为了排版美观，当一天有多笔订单时，把最左侧的日期格子合并
+                if (dailySales.size() > 1) {
+                    sheet.addMergedRegion(new CellRangeAddress(firstRowOfDay, rowIndex - 1, 0, 0));
+                }
             }
         }
 
-        Row totalRow = sheet.createRow(32);
-        for (int c = 0; c <= 3; c++) {
+        // --- 底部总计行 ---
+        Row totalRow = sheet.createRow(rowIndex);
+        for (int c = 0; c <= 4; c++) {
             totalRow.createCell(c).setCellStyle(headerStyle); 
         }
         totalRow.getCell(0).setCellValue("总计");
         
-        totalRow.getCell(1).setCellFormula("SUM(B2:B32)");
-        totalRow.getCell(3).setCellFormula("SUM(D2:D32)");
+        // 【修改4】动态公式求和：C列(索引2)汇总重量，E列(索引4)汇总金额
+        if (rowIndex > 1) {
+            totalRow.getCell(2).setCellFormula("SUM(C2:C" + rowIndex + ")");
+            totalRow.getCell(4).setCellFormula("SUM(E2:E" + rowIndex + ")");
+        }
 
+        // 强制 Excel 重算公式
         sheet.setForceFormulaRecalculation(true);
 
         try (FileOutputStream out = new FileOutputStream(fileName)) {
