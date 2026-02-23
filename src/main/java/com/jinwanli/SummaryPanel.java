@@ -235,7 +235,7 @@ public class SummaryPanel extends JPanel {
     private double currentExpense = 0;
     private double currentSalary = 0;
 
-    private void refreshData() {
+    public void refreshData() {
         String year = (String) yearBox.getSelectedItem();
         String month = (String) monthBox.getSelectedItem();
         String datePrefix = year + "-" + month;

@@ -117,7 +117,7 @@ public class SalesPanel extends JPanel {
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
-    private void refreshData() {
+    public void refreshData() {
         model.setRowCount(0);
         List<SalesRecord> list = DataManager.getInstance().getSalesRecords();
         for (SalesRecord r : list) {

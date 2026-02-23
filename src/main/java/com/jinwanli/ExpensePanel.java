@@ -108,7 +108,7 @@ public class ExpensePanel extends JPanel {
         refreshData();
     }
 
-    private void refreshData() {
+    public void refreshData() {
         model.setRowCount(0);
         List<ExpenseRecord> list = DataManager.getInstance().getExpenseRecords();
         for (ExpenseRecord r : list) {
