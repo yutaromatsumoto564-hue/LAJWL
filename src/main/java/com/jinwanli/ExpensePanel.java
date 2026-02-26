@@ -4,6 +4,8 @@ import com.jinwanli.model.ExpenseRecord;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public class ExpensePanel extends JPanel {
     private JTable table;
@@ -13,6 +15,7 @@ public class ExpensePanel extends JPanel {
         setLayout(new BorderLayout());
         setBackground(UIUtils.COLOR_BG_MAIN);
 
+        // 顶部按钮面板
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
         topPanel.setBackground(UIUtils.COLOR_BG_MAIN);
 
@@ -40,6 +43,24 @@ public class ExpensePanel extends JPanel {
         topPanel.add(addBtn);
         topPanel.add(deleteBtn);
 
+        // 分类卡片面板
+        JPanel categoryPanel = new JPanel(new GridLayout(2, 5, 10, 10));
+        categoryPanel.setBackground(UIUtils.COLOR_BG_MAIN);
+        categoryPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        // 收支分类列表
+        String[] categories = {
+            "材料采购", "车旅费", "伙食费", "电费", "项目投资",
+            "其他支出", "股东注资(收入)", "政府补贴(收入)", "其他(收入)"
+        };
+
+        // 创建分类卡片
+        for (String category : categories) {
+            JPanel card = createCategoryCard(category);
+            categoryPanel.add(card);
+        }
+
+        // 表格区域
         String[] columnNames = {"日期", "收支分类", "金额(元)", "用途/备注", "经手人"};
         model = new DefaultTableModel(columnNames, 0) {
             @Override public boolean isCellEditable(int row, int col) { return true; }
@@ -84,9 +105,59 @@ public class ExpensePanel extends JPanel {
         });
 
         JScrollPane scrollPane = new JScrollPane(table);
-        add(topPanel, BorderLayout.NORTH);
+        
+        // 组装面板
+        JPanel northPanel = new JPanel(new BorderLayout());
+        northPanel.add(topPanel, BorderLayout.NORTH);
+        northPanel.add(categoryPanel, BorderLayout.CENTER);
+        
+        add(northPanel, BorderLayout.NORTH);
         add(scrollPane, BorderLayout.CENTER);
         refreshTable();
+    }
+
+    // 创建分类卡片
+    private JPanel createCategoryCard(String category) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(UIUtils.COLOR_BG_CARD);
+        card.setBorder(BorderFactory.createLineBorder(UIUtils.COLOR_BORDER, 1));
+        card.setPreferredSize(new Dimension(120, 80));
+        card.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        // 卡片标题
+        JLabel titleLabel = new JLabel(category);
+        titleLabel.setFont(UIUtils.FONT_BODY);
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        titleLabel.setVerticalAlignment(SwingConstants.CENTER);
+        card.add(titleLabel, BorderLayout.CENTER);
+        
+        // 鼠标点击事件
+        card.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                ExpenseDialog dialog = new ExpenseDialog((JFrame) SwingUtilities.getWindowAncestor(ExpensePanel.this), null);
+                // 设置默认分类
+                dialog.setDefaultCategory(category);
+                dialog.setVisible(true);
+                ExpenseRecord record = dialog.getData();
+                if (record != null) {
+                    DataManager.getInstance().addExpenseRecord(record);
+                    refreshTable();
+                }
+            }
+            
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                card.setBackground(new Color(240, 240, 240));
+            }
+            
+            @Override
+            public void mouseExited(MouseEvent e) {
+                card.setBackground(UIUtils.COLOR_BG_CARD);
+            }
+        });
+        
+        return card;
     }
 
     public void refreshTable() {

@@ -116,4 +116,9 @@ public class ExpenseDialog extends JDialog {
             return null;
         }
     }
+    
+    // 设置默认分类
+    public void setDefaultCategory(String category) {
+        categoryBox.setSelectedItem(category);
+    }
 }
