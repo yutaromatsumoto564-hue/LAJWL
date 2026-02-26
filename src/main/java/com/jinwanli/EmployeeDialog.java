@@ -5,7 +5,7 @@ import javax.swing.*;
 import java.awt.*;
 
 public class EmployeeDialog extends JDialog {
-    private JTextField nameField, phoneField, idCardField, baseSalaryField, perfSalaryField, overtimeField;
+    private JTextField nameField, phoneField, idCardField, totalSalaryField;
     private JComboBox<String> posBox;
     private boolean confirmed = false;
 
@@ -44,17 +44,9 @@ public class EmployeeDialog extends JDialog {
         idCardField = UIUtils.createTextField();
         addFormRow(formPanel, gbc, row++, "身份证号:", idCardField);
         
-        baseSalaryField = UIUtils.createTextField();
-        baseSalaryField.setText("0");
-        addFormRow(formPanel, gbc, row++, "基本工资(元):", baseSalaryField);
-        
-        perfSalaryField = UIUtils.createTextField();
-        perfSalaryField.setText("0");
-        addFormRow(formPanel, gbc, row++, "绩效工资(元):", perfSalaryField);
-        
-        overtimeField = UIUtils.createTextField();
-        overtimeField.setText("0");
-        addFormRow(formPanel, gbc, row++, "加班补贴(元):", overtimeField);
+        totalSalaryField = UIUtils.createTextField();
+        totalSalaryField.setText("0");
+        addFormRow(formPanel, gbc, row++, "总工资(元):", totalSalaryField);
         
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 15));
         btnPanel.setBackground(UIUtils.COLOR_BG_CARD);
@@ -99,11 +91,9 @@ public class EmployeeDialog extends JDialog {
             String pos = (String) posBox.getSelectedItem();
             String phone = phoneField.getText().trim();
             String idCard = idCardField.getText().trim();
-            double baseSalary = parseDouble(baseSalaryField.getText());
-            double perfSalary = parseDouble(perfSalaryField.getText());
-            double overtime = parseDouble(overtimeField.getText());
+            double totalSalary = parseDouble(totalSalaryField.getText());
             
-            return new Employee(id, name, pos, phone, idCard, baseSalary, perfSalary, overtime);
+            return new Employee(id, name, pos, phone, idCard, totalSalary, 0, 0);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "工资请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
             return null;
