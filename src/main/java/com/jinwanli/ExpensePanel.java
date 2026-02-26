@@ -9,6 +9,8 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ExpensePanel extends JPanel {
     private JTable table;
@@ -307,9 +309,20 @@ public class ExpensePanel extends JPanel {
         monthBox.setFont(UIUtils.FONT_BODY);
         controlPanel.add(monthBox);
         
-        // 表格模型
+        // 表格区域
         String[] columnNames = {"月份", "员工姓名", "职位", "基本工资(元)", "绩效工资(元)", "加班补贴(元)", "总工资(元)", "状态"};
         javax.swing.table.DefaultTableModel detailModel = new javax.swing.table.DefaultTableModel(columnNames, 0) {
+            // 存储记录ID的映射
+            private Map<Integer, String> rowToRecordIdMap = new HashMap<>();
+            
+            public void setRecordId(int row, String recordId) {
+                rowToRecordIdMap.put(row, recordId);
+            }
+            
+            public String getRecordId(int row) {
+                return rowToRecordIdMap.get(row);
+            }
+            
             @Override public boolean isCellEditable(int row, int col) { 
                 return col != 7; // 状态列不可编辑
             }
@@ -393,15 +406,25 @@ public class ExpensePanel extends JPanel {
                     int col = e.getColumn();
                     Object newValue = detailModel.getValueAt(row, col);
                     
-                    // 薪资明细编辑处理
-                    String originalMonthVal = (String) detailModel.getValueAt(row, 0);
-                    String nameVal = (String) detailModel.getValueAt(row, 1);
+                    // 获取记录ID
+                    String recordId = null;
+                    try {
+                        java.lang.reflect.Method getRecordIdMethod = detailModel.getClass().getMethod("getRecordId", int.class);
+                        recordId = (String) getRecordIdMethod.invoke(detailModel, row);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        return;
+                    }
+                    
+                    if (recordId == null) {
+                        return;
+                    }
                     
                     // 查找对应的月度工资记录
                     List<MonthlySalaryRecord> records = DataManager.getInstance().getMonthlySalaryRecords();
                     for (int i = 0; i < records.size(); i++) {
                         MonthlySalaryRecord record = records.get(i);
-                        if (record.getMonth().equals(originalMonthVal) && record.getEmployeeName().equals(nameVal)) {
+                        if (record.getId().equals(recordId)) {
                             // 根据列索引更新不同字段
                             switch (col) {
                                 case 0: // 月份
@@ -563,6 +586,7 @@ public class ExpensePanel extends JPanel {
         model.setRowCount(0);
         for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
             if (selectedMonth == null || selectedMonth.equals(record.getMonth())) {
+                int row = model.getRowCount();
                 model.addRow(new Object[]{
                     record.getMonth(),
                     record.getEmployeeName(),
@@ -573,6 +597,15 @@ public class ExpensePanel extends JPanel {
                     String.format("%.2f", record.getTotalSalary()),
                     record.getStatus()
                 });
+                // 存储记录ID
+                if (model instanceof javax.swing.table.DefaultTableModel) {
+                    try {
+                        java.lang.reflect.Method setRecordIdMethod = model.getClass().getMethod("setRecordId", int.class, String.class);
+                        setRecordIdMethod.invoke(model, row, record.getId());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
             }
         }
     }
