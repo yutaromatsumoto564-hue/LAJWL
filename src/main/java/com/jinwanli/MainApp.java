@@ -7,7 +7,7 @@ public class MainApp {
         // 数据清洗
         DataCleaner.cleanExpenseData();
         
-        // 启动登录窗口
-        new LoginFrame();
+        // 直接启动主窗口，跳过登录
+        new MainFrame().setVisible(true);
     }
 } 
