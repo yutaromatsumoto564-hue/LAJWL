@@ -118,15 +118,16 @@ public class ExpensePanel extends JPanel {
 
     // 创建分类卡片
     private JPanel createCategoryCard(String category) {
-        JPanel card = new JPanel(new BorderLayout());
+        JPanel card = new JPanel(new BorderLayout(10, 10));
         card.setBackground(UIUtils.COLOR_BG_CARD);
-        card.setBorder(BorderFactory.createLineBorder(UIUtils.COLOR_BORDER, 1));
+        card.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         card.setPreferredSize(new Dimension(120, 80));
         card.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         // 卡片标题
         JLabel titleLabel = new JLabel(category);
-        titleLabel.setFont(UIUtils.FONT_BODY);
+        titleLabel.setFont(new Font("Dialog", Font.BOLD, 16));
+        titleLabel.setForeground(UIUtils.COLOR_TEXT_PRIMARY);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         titleLabel.setVerticalAlignment(SwingConstants.CENTER);
         card.add(titleLabel, BorderLayout.CENTER);
@@ -135,15 +136,7 @@ public class ExpensePanel extends JPanel {
         card.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                ExpenseDialog dialog = new ExpenseDialog((JFrame) SwingUtilities.getWindowAncestor(ExpensePanel.this), null);
-                // 设置默认分类
-                dialog.setDefaultCategory(category);
-                dialog.setVisible(true);
-                ExpenseRecord record = dialog.getData();
-                if (record != null) {
-                    DataManager.getInstance().addExpenseRecord(record);
-                    refreshTable();
-                }
+                showCategoryDetailDialog(category);
             }
             
             @Override
@@ -158,6 +151,78 @@ public class ExpensePanel extends JPanel {
         });
         
         return card;
+    }
+    
+    // 显示分类详情对话框
+    private void showCategoryDetailDialog(String category) {
+        JDialog dialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), category + " 明细", true);
+        dialog.setSize(800, 500);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout());
+        
+        // 顶部面板
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setBackground(UIUtils.COLOR_BG_MAIN);
+        topPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        
+        JLabel titleLabel = new JLabel(category + " 记录明细");
+        titleLabel.setFont(UIUtils.FONT_HEADING);
+        titleLabel.setForeground(UIUtils.COLOR_TEXT_PRIMARY);
+        topPanel.add(titleLabel, BorderLayout.NORTH);
+        
+        JButton addBtn = UIUtils.createButton("添加" + category + "记录");
+        addBtn.addActionListener(e -> {
+            ExpenseDialog expenseDialog = new ExpenseDialog((JFrame) SwingUtilities.getWindowAncestor(this), null);
+            expenseDialog.setDefaultCategory(category);
+            expenseDialog.setVisible(true);
+            ExpenseRecord record = expenseDialog.getData();
+            if (record != null) {
+                DataManager.getInstance().addExpenseRecord(record);
+                refreshTable();
+                dialog.dispose();
+                showCategoryDetailDialog(category);
+            }
+        });
+        topPanel.add(addBtn, BorderLayout.SOUTH);
+        
+        // 表格区域
+        String[] columnNames = {"日期", "金额(元)", "用途/备注", "经手人"};
+        javax.swing.table.DefaultTableModel detailModel = new javax.swing.table.DefaultTableModel(columnNames, 0) {
+            @Override public boolean isCellEditable(int row, int col) { return false; }
+        };
+        
+        for (ExpenseRecord r : DataManager.getInstance().getExpenseRecords()) {
+            if (category.equals(r.getCategory())) {
+                detailModel.addRow(new Object[]{
+                    r.getDate(),
+                    String.format("%.2f", r.getAmount()),
+                    r.getUsage(),
+                    r.getHandler()
+                });
+            }
+        }
+        
+        JTable detailTable = new JTable(detailModel);
+        detailTable.setRowHeight(36);
+        detailTable.setFont(UIUtils.FONT_NORMAL);
+        detailTable.getTableHeader().setFont(UIUtils.FONT_BODY_BOLD);
+        
+        JScrollPane scrollPane = new JScrollPane(detailTable);
+        
+        // 底部按钮面板
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        btnPanel.setBackground(UIUtils.COLOR_BG_MAIN);
+        btnPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        JButton closeBtn = UIUtils.createSecondaryButton("关闭");
+        closeBtn.addActionListener(e -> dialog.setVisible(false));
+        btnPanel.add(closeBtn);
+        
+        dialog.add(topPanel, BorderLayout.NORTH);
+        dialog.add(scrollPane, BorderLayout.CENTER);
+        dialog.add(btnPanel, BorderLayout.SOUTH);
+        
+        dialog.setVisible(true);
     }
 
     public void refreshTable() {
