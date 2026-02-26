@@ -13,6 +13,7 @@ public class DataManager {
     private List<SalesRecord> salesRecords;
     private List<ExpenseRecord> expenseRecords;
     private List<AttendanceRecord> attendanceRecords;
+    private List<MonthlySalaryRecord> monthlySalaryRecords;
     
     private Map<String, List<AttendanceRecord>> monthlyAttendance;
 
@@ -24,6 +25,7 @@ public class DataManager {
         salesRecords = loadList("sales.dat");
         expenseRecords = loadList("expenses.dat");
         attendanceRecords = loadList("attendance.dat");
+        monthlySalaryRecords = loadList("monthly_salaries.dat");
         monthlyAttendance = loadMonthlyAttendance();
 
         Set<String> seenEmpNames = new HashSet<>();
@@ -176,4 +178,28 @@ public class DataManager {
     }
     
     public void saveExpenses() { saveList(expenseRecords, "expenses.dat"); }
+
+    // ========== 月度工资管理 ==========
+    public List<MonthlySalaryRecord> getMonthlySalaryRecords() { return monthlySalaryRecords; }
+    
+    public void addMonthlySalaryRecord(MonthlySalaryRecord record) {
+        monthlySalaryRecords.add(record);
+        saveMonthlySalaries();
+    }
+    
+    public void updateMonthlySalaryRecord(int index, MonthlySalaryRecord record) {
+        if (index >= 0 && index < monthlySalaryRecords.size()) {
+            monthlySalaryRecords.set(index, record);
+            saveMonthlySalaries();
+        }
+    }
+    
+    public void deleteMonthlySalaryRecord(int index) {
+        if (index >= 0 && index < monthlySalaryRecords.size()) {
+            monthlySalaryRecords.remove(index);
+            saveMonthlySalaries();
+        }
+    }
+    
+    public void saveMonthlySalaries() { saveList(monthlySalaryRecords, "monthly_salaries.dat"); }
 }

@@ -2,6 +2,7 @@ package com.jinwanli;
 
 import com.jinwanli.model.ExpenseRecord;
 import com.jinwanli.model.Employee;
+import com.jinwanli.model.MonthlySalaryRecord;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -235,7 +236,7 @@ public class ExpensePanel extends JPanel {
     // 显示员工工资详情对话框
     private void showEmployeeSalaryDetailDialog() {
         JDialog dialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), "员工工资明细", true);
-        dialog.setSize(900, 550);
+        dialog.setSize(1000, 600);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout());
         
@@ -249,36 +250,50 @@ public class ExpensePanel extends JPanel {
         titleLabel.setForeground(UIUtils.COLOR_TEXT_PRIMARY);
         topPanel.add(titleLabel, BorderLayout.NORTH);
         
-        JButton addBtn = UIUtils.createButton("添加员工");
+        // 月份选择和添加按钮面板
+        JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        controlPanel.setBackground(UIUtils.COLOR_BG_MAIN);
+        
+        JLabel monthLabel = new JLabel("选择月份:");
+        monthLabel.setFont(UIUtils.FONT_BODY);
+        controlPanel.add(monthLabel);
+        
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM");
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        java.util.List<String> months = new java.util.ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            java.util.Calendar c = (java.util.Calendar) cal.clone();
+            c.add(java.util.Calendar.MONTH, -i);
+            months.add(sdf.format(c.getTime()));
+        }
+        
+        JComboBox<String> monthBox = new JComboBox<>(months.toArray(new String[0]));
+        monthBox.setFont(UIUtils.FONT_BODY);
+        controlPanel.add(monthBox);
+        
+        JButton addBtn = UIUtils.createButton("添加月度工资");
         addBtn.addActionListener(e -> {
-            EmployeeDialog employeeDialog = new EmployeeDialog((JFrame) SwingUtilities.getWindowAncestor(this));
-            employeeDialog.setVisible(true);
-            Employee employee = employeeDialog.getData();
-            if (employee != null) {
-                DataManager.getInstance().addEmployee(employee);
+            MonthlySalaryDialog salaryDialog = new MonthlySalaryDialog((JFrame) SwingUtilities.getWindowAncestor(this));
+            salaryDialog.setVisible(true);
+            MonthlySalaryRecord record = salaryDialog.getData();
+            if (record != null) {
+                DataManager.getInstance().addMonthlySalaryRecord(record);
                 dialog.dispose();
                 showEmployeeSalaryDetailDialog();
             }
         });
-        topPanel.add(addBtn, BorderLayout.SOUTH);
+        controlPanel.add(addBtn);
+        
+        topPanel.add(controlPanel, BorderLayout.SOUTH);
         
         // 表格区域
-        String[] columnNames = {"姓名", "职位", "联系电话", "基本工资(元)", "绩效工资(元)", "加班补贴(元)", "预计总薪资(元)"};
+        String[] columnNames = {"月份", "员工姓名", "职位", "基本工资(元)", "绩效工资(元)", "加班补贴(元)", "总工资(元)", "状态"};
         javax.swing.table.DefaultTableModel detailModel = new javax.swing.table.DefaultTableModel(columnNames, 0) {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };
         
-        for (Employee emp : DataManager.getInstance().getEmployees()) {
-            detailModel.addRow(new Object[]{
-                emp.getName(),
-                emp.getPosition(),
-                emp.getPhone(),
-                String.format("%.2f", emp.getBaseSalary()),
-                String.format("%.2f", emp.getPerformanceSalary()),
-                String.format("%.2f", emp.getOvertimeSalary()),
-                String.format("%.2f", emp.getTotalSalary())
-            });
-        }
+        // 添加表格数据
+        refreshSalaryTable(detailModel, (String) monthBox.getSelectedItem());
         
         JTable detailTable = new JTable(detailModel);
         detailTable.setRowHeight(36);
@@ -286,6 +301,11 @@ public class ExpensePanel extends JPanel {
         detailTable.getTableHeader().setFont(UIUtils.FONT_BODY_BOLD);
         
         JScrollPane scrollPane = new JScrollPane(detailTable);
+        
+        // 月份选择变化时刷新表格
+        monthBox.addActionListener(e -> {
+            refreshSalaryTable(detailModel, (String) monthBox.getSelectedItem());
+        });
         
         // 底部按钮面板
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -301,6 +321,25 @@ public class ExpensePanel extends JPanel {
         dialog.add(btnPanel, BorderLayout.SOUTH);
         
         dialog.setVisible(true);
+    }
+    
+    // 刷新工资表格
+    private void refreshSalaryTable(javax.swing.table.DefaultTableModel model, String selectedMonth) {
+        model.setRowCount(0);
+        for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
+            if (selectedMonth == null || selectedMonth.equals(record.getMonth())) {
+                model.addRow(new Object[]{
+                    record.getMonth(),
+                    record.getEmployeeName(),
+                    record.getEmployeePosition(),
+                    String.format("%.2f", record.getBaseSalary()),
+                    String.format("%.2f", record.getPerformanceSalary()),
+                    String.format("%.2f", record.getOvertimeSalary()),
+                    String.format("%.2f", record.getTotalSalary()),
+                    record.getStatus()
+                });
+            }
+        }
     }
 
     public void refreshTable() {
