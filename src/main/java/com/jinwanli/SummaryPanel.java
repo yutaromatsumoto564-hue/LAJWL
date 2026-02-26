@@ -77,6 +77,12 @@ public class SummaryPanel extends JPanel {
                     for (Employee emp : DataManager.getInstance().getEmployees()) {
                         salaries[i] += emp.getTotalSalary();
                     }
+                    // 从月度工资记录中获取实际工资
+                    for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
+                        if (record.getMonth().equals(m)) {
+                            salaries[i] = record.getTotalSalary(); // 使用实际工资替换预估
+                        }
+                    }
                     maxVal = Math.max(maxVal, Math.max(incomes[i], Math.max(expenses[i], salaries[i])));
                 }
 
@@ -196,8 +202,17 @@ public class SummaryPanel extends JPanel {
         }
 
         double currentSalary = 0;
-        for (Employee emp : DataManager.getInstance().getEmployees()) {
-            currentSalary += emp.getTotalSalary();
+        // 从月度工资记录中获取当月实际工资
+        for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
+            if (record.getMonth().equals(currentMonth)) {
+                currentSalary += record.getTotalSalary();
+            }
+        }
+        // 如果没有月度工资记录，使用员工的固定薪资作为预估
+        if (currentSalary == 0) {
+            for (Employee emp : DataManager.getInstance().getEmployees()) {
+                currentSalary += emp.getTotalSalary();
+            }
         }
 
         double totalRevenue = currentIncome + otherIncome;
