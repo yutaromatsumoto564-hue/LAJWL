@@ -329,6 +329,15 @@ public class ExpensePanel extends JPanel {
                                 detailTable.setValueAt(newStatus, row, 7);
                                 JOptionPane.showMessageDialog(dialog, "状态已修改为：" + newStatus, "成功", JOptionPane.INFORMATION_MESSAGE);
                                 
+                                // 刷新经营总览
+                                MainFrame mainFrame = MainFrame.getInstance();
+                                if (mainFrame != null) {
+                                    SummaryPanel summaryPanel = mainFrame.getSummaryPanel();
+                                    if (summaryPanel != null) {
+                                        summaryPanel.refreshData();
+                                    }
+                                }
+                                
                                 // 阻止事件继续传播，避免进入编辑模式
                                 e.consume();
                                 return;

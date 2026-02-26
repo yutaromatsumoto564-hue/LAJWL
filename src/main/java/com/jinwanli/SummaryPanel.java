@@ -412,6 +412,16 @@ public class SummaryPanel extends JPanel {
                                 // 更新表格
                                 table.setValueAt(newStatus, row, 7);
                                 JOptionPane.showMessageDialog(dialog, "状态已修改为：" + newStatus, "成功", JOptionPane.INFORMATION_MESSAGE);
+                                
+                                // 刷新经营总览
+                                MainFrame mainFrame = MainFrame.getInstance();
+                                if (mainFrame != null) {
+                                    SummaryPanel summaryPanel = mainFrame.getSummaryPanel();
+                                    if (summaryPanel != null) {
+                                        summaryPanel.refreshData();
+                                    }
+                                }
+                                
                                 return;
                             }
                         }

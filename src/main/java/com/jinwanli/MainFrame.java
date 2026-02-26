@@ -14,9 +14,12 @@ public class MainFrame extends JFrame {
     private SalesPanel salesPanel;
     private ExpensePanel expensePanel;
     
+    private static MainFrame instance;
+    
     private JButton summaryBtn, attendanceBtn, salesBtn, expenseBtn, backupBtn, exitBtn;
 
     public MainFrame() {
+        instance = this;
         setTitle(ConfigManager.getProperty("app.name"));
         setSize(1280, 800);
         setMinimumSize(new Dimension(1024, 700));
@@ -213,5 +216,13 @@ public class MainFrame extends JFrame {
                 }
                 break;
         }
+    }
+    
+    public static MainFrame getInstance() {
+        return instance;
+    }
+    
+    public SummaryPanel getSummaryPanel() {
+        return summaryPanel;
     }
 }
