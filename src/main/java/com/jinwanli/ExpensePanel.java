@@ -260,6 +260,41 @@ public class ExpensePanel extends JPanel {
         btnPanel.setBackground(UIUtils.COLOR_BG_MAIN);
         btnPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
+        JButton deleteBtn = UIUtils.createSecondaryButton("删除记录");
+        deleteBtn.addActionListener(e -> {
+            int selectedRow = detailTable.getSelectedRow();
+            if (selectedRow >= 0) {
+                int confirm = JOptionPane.showConfirmDialog(dialog, "确定要删除这条记录吗？", "确认删除", JOptionPane.YES_NO_OPTION);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    String date = (String) detailTable.getValueAt(selectedRow, 0);
+                    String usage = (String) detailTable.getValueAt(selectedRow, 2);
+                    String handler = (String) detailTable.getValueAt(selectedRow, 3);
+                    
+                    // 查找对应的记录
+                    List<ExpenseRecord> records = DataManager.getInstance().getExpenseRecords();
+                    for (int i = 0; i < records.size(); i++) {
+                        ExpenseRecord record = records.get(i);
+                        if (record.getDate().equals(date) && 
+                            record.getCategory().equals(category) &&
+                            record.getUsage().equals(usage) &&
+                            record.getHandler().equals(handler)) {
+                            // 删除记录
+                            DataManager.getInstance().getExpenseRecords().remove(i);
+                            DataManager.getInstance().saveExpenses();
+                            
+                            // 更新表格
+                            detailModel.removeRow(selectedRow);
+                            JOptionPane.showMessageDialog(dialog, "记录已删除", "成功", JOptionPane.INFORMATION_MESSAGE);
+                            return;
+                        }
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(dialog, "请选择要删除的记录！", "提示", JOptionPane.WARNING_MESSAGE);
+            }
+        });
+        btnPanel.add(deleteBtn);
+        
         JButton closeBtn = UIUtils.createSecondaryButton("关闭");
         closeBtn.addActionListener(e -> dialog.setVisible(false));
         btnPanel.add(closeBtn);
