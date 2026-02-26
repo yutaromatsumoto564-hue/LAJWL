@@ -88,26 +88,9 @@ public class SummaryPanel extends JPanel {
                     if (monthlySalaryFromExpense > 0) {
                         salaries[i] = monthlySalaryFromExpense;
                     } else {
-                        // 如果没有财务收支中的员工工资记录，使用月度工资记录
+                        // 如果没有财务收支中的员工工资记录，使用员工的固定薪资
                         for (Employee emp : DataManager.getInstance().getEmployees()) {
                             salaries[i] += emp.getTotalSalary();
-                        }
-                        // 从月度工资记录中获取实际工资（包括当月已发放和上个月未发放的）
-                        String currentMonth = last6Months.get(i);
-                        String lastMonth = getLastMonth(currentMonth);
-                        double monthlySalary = 0;
-                        for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
-                            // 当月已发放的工资
-                            if (record.getMonth().equals(currentMonth) && "已发放".equals(record.getStatus())) {
-                                monthlySalary += record.getTotalSalary();
-                            }
-                            // 上个月未发放的工资
-                            if (record.getMonth().equals(lastMonth) && "未发放".equals(record.getStatus())) {
-                                monthlySalary += record.getTotalSalary();
-                            }
-                        }
-                        if (monthlySalary > 0) {
-                            salaries[i] = monthlySalary; // 使用实际工资替换预估
                         }
                     }
                     maxVal = Math.max(maxVal, Math.max(incomes[i], Math.max(expenses[i], salaries[i])));
@@ -257,26 +240,10 @@ public class SummaryPanel extends JPanel {
                 currentSalary += e.getAmount();
             }
         }
-        // 如果没有财务收支中的员工工资记录，使用月度工资记录作为备选
+        // 如果没有财务收支中的员工工资记录，使用员工的固定薪资作为备选
         if (currentSalary == 0) {
-            // 从月度工资记录中获取当月实际工资（包括当月已发放和上个月未发放的）
-            String lastMonth = getLastMonth(month);
-            
-            for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
-                // 当月已发放的工资
-                if (record.getMonth().equals(month) && "已发放".equals(record.getStatus())) {
-                    currentSalary += record.getTotalSalary();
-                }
-                // 上个月未发放的工资
-                if (record.getMonth().equals(lastMonth) && "未发放".equals(record.getStatus())) {
-                    currentSalary += record.getTotalSalary();
-                }
-            }
-            // 如果没有月度工资记录，使用员工的固定薪资作为预估
-            if (currentSalary == 0) {
-                for (Employee emp : DataManager.getInstance().getEmployees()) {
-                    currentSalary += emp.getTotalSalary();
-                }
+            for (Employee emp : DataManager.getInstance().getEmployees()) {
+                currentSalary += emp.getTotalSalary();
             }
         }
 
@@ -570,21 +537,6 @@ public class SummaryPanel extends JPanel {
         dialog.add(btnPanel, BorderLayout.SOUTH);
 
         dialog.setVisible(true);
-    }
-    
-    // 获取上个月的月份字符串 (yyyy-MM格式)
-    private String getLastMonth(String currentMonth) {
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM");
-            Date date = sdf.parse(currentMonth);
-            Calendar cal = Calendar.getInstance();
-            cal.setTime(date);
-            cal.add(Calendar.MONTH, -1);
-            return sdf.format(cal.getTime());
-        } catch (Exception e) {
-            e.printStackTrace();
-            return currentMonth; // 出错时返回当前月份
-        }
     }
 
     private class BarRegion {
