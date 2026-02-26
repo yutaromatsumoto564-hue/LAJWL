@@ -345,54 +345,19 @@ public class SummaryPanel extends JPanel {
                 }
             }
         } else if (type.equals("SALARY")) {
-            cols = new String[]{"日期", "分类", "金额(元)", "用途", "经手人"};
+            cols = new String[]{"日期", "金额(元)", "用途"};
             model = new javax.swing.table.DefaultTableModel(cols, 0) {
                 @Override public boolean isCellEditable(int r, int c) { return true; } // 允许编辑
             };
             
             // 从财务收支记录中获取员工工资记录
-            boolean hasExpenseRecords = false;
             for (ExpenseRecord e : DataManager.getInstance().getExpenseRecords()) {
                 if (e.getDate().startsWith(month) && e.getCategory().equals("员工工资")) {
                     model.addRow(new Object[]{
                         e.getDate(),
-                        e.getCategory(),
                         String.format("%.2f", e.getAmount()),
-                        e.getUsage(),
-                        e.getHandler()
+                        e.getUsage()
                     });
-                    hasExpenseRecords = true;
-                }
-            }
-            
-            // 如果没有财务收支中的员工工资记录，使用月度工资记录作为备选
-            if (!hasExpenseRecords) {
-                // 从月度工资记录中获取当月实际工资
-                boolean hasMonthlyRecords = false;
-                for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
-                    if (record.getMonth().equals(month)) {
-                        model.addRow(new Object[]{
-                            record.getMonth() + "-01", // 构造日期格式
-                            "员工工资",
-                            String.format("%.2f", record.getTotalSalary()),
-                            record.getEmployeeName() + " - " + record.getEmployeePosition(),
-                            "系统自动生成"
-                        });
-                        hasMonthlyRecords = true;
-                    }
-                }
-                
-                // 如果没有月度工资记录，使用员工的固定薪资作为预估
-                if (!hasMonthlyRecords) {
-                    for (Employee emp : DataManager.getInstance().getEmployees()) {
-                        model.addRow(new Object[]{
-                            month + "-01", // 构造日期格式
-                            "员工工资",
-                            String.format("%.2f", emp.getTotalSalary()),
-                            emp.getName() + " - " + emp.getPosition(),
-                            "系统自动生成（预估）"
-                        });
-                    }
                 }
             }
         } else {
@@ -421,31 +386,10 @@ public class SummaryPanel extends JPanel {
                     totalSal += e.getAmount();
                 }
             }
-            // 如果没有财务收支中的员工工资记录，使用月度工资记录作为备选
-            if (totalSal == 0) {
-                // 从月度工资记录中获取当月实际工资（包括当月已发放和上个月未发放的）
-                String lastMonth = getLastMonth(month);
-                for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
-                    // 当月已发放的工资
-                    if (record.getMonth().equals(month) && "已发放".equals(record.getStatus())) {
-                        totalSal += record.getTotalSalary();
-                    }
-                    // 上个月未发放的工资
-                    if (record.getMonth().equals(lastMonth) && "未发放".equals(record.getStatus())) {
-                        totalSal += record.getTotalSalary();
-                    }
-                }
-                // 如果没有月度工资记录，使用员工的固定薪资作为预估
-                if (totalSal == 0) {
-                    for (Employee emp : DataManager.getInstance().getEmployees()) {
-                        totalSal += emp.getTotalSalary();
-                    }
-                }
-            }
             
             model.addRow(new Object[]{"【+】本月总收入(含注资)", String.format("%.2f", totalInc), "包含农产品出货营业额与各类注资补贴"});
             model.addRow(new Object[]{"【-】本月杂项支出", String.format("%.2f", totalExp), "日常运营各类开销"});
-            model.addRow(new Object[]{"【-】薪资成本", String.format("%.2f", totalSal), "系统录入的所有员工薪资总计"});
+            model.addRow(new Object[]{"【-】薪资成本", String.format("%.2f", totalSal), "财务收支中的员工工资总计"});
             model.addRow(new Object[]{"【=】本月净利润", String.format("%.2f", totalInc - totalExp - totalSal), "当月最终核算利润结余"});
         }
 
@@ -568,62 +512,37 @@ public class SummaryPanel extends JPanel {
                     } else if (type.equals("SALARY")) {
                         // 薪资明细编辑处理（现在是财务收支记录）
                         String date = (String) model.getValueAt(row, 0);
-                        String amountStr = (String) model.getValueAt(row, 2);
-                        String usage = (String) model.getValueAt(row, 3);
-                        String handler = (String) model.getValueAt(row, 4);
+                        String amountStr = (String) model.getValueAt(row, 1);
+                        String usage = (String) model.getValueAt(row, 2);
                         
-                        // 检查是否是财务收支记录
-                        boolean isExpenseRecord = !handler.equals("系统自动生成") && !handler.equals("系统自动生成（预估）");
-                        
-                        if (isExpenseRecord) {
-                            // 查找对应的支出记录
-                            List<ExpenseRecord> expenses = DataManager.getInstance().getExpenseRecords();
-                            for (int i = 0; i < expenses.size(); i++) {
-                                ExpenseRecord expense = expenses.get(i);
-                                if (expense.getDate().equals(date) && 
-                                    expense.getCategory().equals("员工工资") &&
-                                    expense.getUsage().equals(usage) && 
-                                    expense.getHandler().equals(handler)) {
-                                    // 更新支出记录
-                                    try {
-                                        double amount = Double.parseDouble(amountStr);
-                                        expense.setAmount(amount);
-                                        DataManager.getInstance().updateExpenseRecord(i, expense);
-                                    } catch (Exception ex) {
-                                        JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
-                                        return;
-                                    }
-                                    break;
+                        // 查找对应的支出记录
+                        List<ExpenseRecord> expenses = DataManager.getInstance().getExpenseRecords();
+                        for (int i = 0; i < expenses.size(); i++) {
+                            ExpenseRecord expense = expenses.get(i);
+                            if (expense.getDate().equals(date) && 
+                                expense.getCategory().equals("员工工资") &&
+                                expense.getUsage().equals(usage)) {
+                                // 根据列索引更新不同字段
+                                switch (col) {
+                                    case 0: // 日期
+                                        expense.setDate((String) newValue);
+                                        break;
+                                    case 1: // 金额
+                                        try {
+                                            double amount = Double.parseDouble(newValue.toString());
+                                            expense.setAmount(amount);
+                                        } catch (Exception ex) {
+                                            JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
+                                            return;
+                                        }
+                                        break;
+                                    case 2: // 用途
+                                        expense.setUsage((String) newValue);
+                                        break;
                                 }
-                            }
-                        } else {
-                            // 对于系统生成的记录（月度工资或预估），允许编辑
-                            // 从月度工资记录中查找并更新
-                            String month = date.substring(0, 7); // 提取月份部分
-                            String employeeName = usage.split(" - ")[0]; // 从用途中提取员工姓名
-                            
-                            List<MonthlySalaryRecord> records = DataManager.getInstance().getMonthlySalaryRecords();
-                            for (int i = 0; i < records.size(); i++) {
-                                MonthlySalaryRecord record = records.get(i);
-                                if (record.getMonth().equals(month) && record.getEmployeeName().equals(employeeName)) {
-                                    // 更新总工资
-                                    try {
-                                        double totalSalary = Double.parseDouble(amountStr);
-                                        record.setTotalSalary(totalSalary);
-                                        record.setBaseSalary(totalSalary);
-                                        record.setPerformanceSalary(0);
-                                        record.setOvertimeSalary(0);
-                                        DataManager.getInstance().updateMonthlySalaryRecord(i, record);
-                                        
-                                        // 更新表格显示
-                                        model.setValueAt(amountStr, row, 2);
-                                        JOptionPane.showMessageDialog(dialog, "工资已更新！", "成功", JOptionPane.INFORMATION_MESSAGE);
-                                    } catch (Exception ex) {
-                                        JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
-                                        return;
-                                    }
-                                    break;
-                                }
+                                // 更新记录
+                                DataManager.getInstance().updateExpenseRecord(i, expense);
+                                break;
                             }
                         }
                         
