@@ -597,9 +597,34 @@ public class SummaryPanel extends JPanel {
                                 }
                             }
                         } else {
-                            // 对于系统生成的记录（月度工资或预估），不允许编辑
-                            JOptionPane.showMessageDialog(dialog, "系统生成的记录不允许编辑，请在财务收支中添加实际记录！", "提示", JOptionPane.INFORMATION_MESSAGE);
-                            return;
+                            // 对于系统生成的记录（月度工资或预估），允许编辑
+                            // 从月度工资记录中查找并更新
+                            String month = date.substring(0, 7); // 提取月份部分
+                            String employeeName = usage.split(" - ")[0]; // 从用途中提取员工姓名
+                            
+                            List<MonthlySalaryRecord> records = DataManager.getInstance().getMonthlySalaryRecords();
+                            for (int i = 0; i < records.size(); i++) {
+                                MonthlySalaryRecord record = records.get(i);
+                                if (record.getMonth().equals(month) && record.getEmployeeName().equals(employeeName)) {
+                                    // 更新总工资
+                                    try {
+                                        double totalSalary = Double.parseDouble(amountStr);
+                                        record.setTotalSalary(totalSalary);
+                                        record.setBaseSalary(totalSalary);
+                                        record.setPerformanceSalary(0);
+                                        record.setOvertimeSalary(0);
+                                        DataManager.getInstance().updateMonthlySalaryRecord(i, record);
+                                        
+                                        // 更新表格显示
+                                        model.setValueAt(amountStr, row, 2);
+                                        JOptionPane.showMessageDialog(dialog, "工资已更新！", "成功", JOptionPane.INFORMATION_MESSAGE);
+                                    } catch (Exception ex) {
+                                        JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
+                                        return;
+                                    }
+                                    break;
+                                }
+                            }
                         }
                         
                         // 刷新经营总览
