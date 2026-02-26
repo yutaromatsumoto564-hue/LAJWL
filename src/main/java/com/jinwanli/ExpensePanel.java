@@ -394,14 +394,14 @@ public class ExpensePanel extends JPanel {
                     Object newValue = detailModel.getValueAt(row, col);
                     
                     // 薪资明细编辑处理
-                    String monthVal = (String) detailModel.getValueAt(row, 0);
+                    String originalMonthVal = (String) detailModel.getValueAt(row, 0);
                     String nameVal = (String) detailModel.getValueAt(row, 1);
                     
                     // 查找对应的月度工资记录
                     List<MonthlySalaryRecord> records = DataManager.getInstance().getMonthlySalaryRecords();
                     for (int i = 0; i < records.size(); i++) {
                         MonthlySalaryRecord record = records.get(i);
-                        if (record.getMonth().equals(monthVal) && record.getEmployeeName().equals(nameVal)) {
+                        if (record.getMonth().equals(originalMonthVal) && record.getEmployeeName().equals(nameVal)) {
                             // 根据列索引更新不同字段
                             switch (col) {
                                 case 0: // 月份
@@ -461,6 +461,11 @@ public class ExpensePanel extends JPanel {
                                 if (summaryPanel != null) {
                                     summaryPanel.refreshData();
                                 }
+                            }
+                            
+                            // 如果修改的是月份，刷新表格以反映新的月份
+                            if (col == 0) {
+                                refreshSalaryTable(detailModel, (String) monthBox.getSelectedItem());
                             }
                             
                             break;
