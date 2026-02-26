@@ -14,6 +14,7 @@ public class SummaryPanel extends JPanel {
     private JPanel chartPanel;
     private List<String> last6Months;
     private List<BarRegion> clickableBars = new ArrayList<>();
+    private String currentDisplayMonth; // 当前显示的月份
 
     public SummaryPanel() {
         setLayout(new BorderLayout(20, 20));
@@ -28,6 +29,9 @@ public class SummaryPanel extends JPanel {
             c.add(Calendar.MONTH, -i);
             last6Months.add(sdf.format(c.getTime()));
         }
+        
+        // 初始化当前显示月份为当前系统月份
+        currentDisplayMonth = new SimpleDateFormat("yyyy-MM").format(new Date());
 
         JPanel cardsPanel = new JPanel(new GridLayout(1, 4, 20, 0));
         cardsPanel.setBackground(UIUtils.COLOR_BG_MAIN);
@@ -194,12 +198,11 @@ public class SummaryPanel extends JPanel {
         
         if (clickType != null) {
             card.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            card.setToolTipText("点击查看本月明细");
+            card.setToolTipText("点击查看" + currentDisplayMonth + "明细");
             card.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
-                    String currentMonth = new SimpleDateFormat("yyyy-MM").format(new Date());
-                    showDetailDialog(currentMonth, clickType);
+                    showDetailDialog(currentDisplayMonth, clickType);
                 }
             });
         }
@@ -215,6 +218,9 @@ public class SummaryPanel extends JPanel {
 
     // 根据指定月份更新卡片数据
     public void updateCardsForMonth(String month) {
+        // 更新当前显示月份
+        currentDisplayMonth = month;
+        
         double currentIncome = 0;
         for (SalesRecord s : DataManager.getInstance().getSalesRecords()) {
             if (s.getDate().startsWith(month)) currentIncome += s.getTotalAmount();

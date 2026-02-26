@@ -488,7 +488,19 @@ public class ExpensePanel extends JPanel {
                             
                             // 如果修改的是月份，刷新表格以反映新的月份
                             if (col == 0) {
-                                refreshSalaryTable(detailModel, (String) monthBox.getSelectedItem());
+                                // 获取修改后的月份
+                                String newMonth = (String) newValue;
+                                // 获取当前选择的月份
+                                String selectedMonth = (String) monthBox.getSelectedItem();
+                                
+                                // 如果修改后的月份与当前选择的月份不同，
+                                // 则从当前表格中移除该行，因为它不属于当前月份了
+                                if (!newMonth.equals(selectedMonth)) {
+                                    detailModel.removeRow(row);
+                                }
+                                
+                                // 刷新表格，确保数据正确显示
+                                refreshSalaryTable(detailModel, selectedMonth);
                             }
                             
                             break;
