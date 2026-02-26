@@ -254,7 +254,7 @@ public class AttendancePanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(UIUtils.COLOR_BG_MAIN);
 
-        String[] cols = {"姓名", "职位", "联系电话", "身份证号", "基本工资(元)"};
+        String[] cols = {"姓名", "职位", "联系电话", "身份证号"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override 
             public boolean isCellEditable(int row, int col) { 
@@ -271,7 +271,6 @@ public class AttendancePanel extends JPanel {
                         case 1: emp.setPosition(newValue); break;
                         case 2: emp.setPhone(newValue); break;
                         case 3: emp.setIdCard(newValue); break;
-                        case 4: emp.setBaseSalary(Double.parseDouble(newValue)); break;
                     }
                     DataManager.getInstance().updateEmployee(row, emp);
                     super.setValueAt(aValue, row, col);
@@ -292,8 +291,7 @@ public class AttendancePanel extends JPanel {
                     e.getName(),
                     e.getPosition(),
                     e.getPhone(),
-                    e.getIdCard(),
-                    e.getBaseSalary()
+                    e.getIdCard()
                 });
             }
         };
