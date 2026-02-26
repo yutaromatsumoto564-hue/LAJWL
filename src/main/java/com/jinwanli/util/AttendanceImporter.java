@@ -345,7 +345,7 @@ public class AttendanceImporter {
                     
                     if (empId == null) {
                         empId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
-                        Employee newEmp = new Employee(empId, name, "员工", "-", "-", 0.0, 0.0, 0.0);
+                        Employee newEmp = new Employee(empId, name, "员工", "", "", 0.0, 0.0, 0.0);
                         
                         com.jinwanli.DataManager.getInstance().addEmployee(newEmp);
                     }

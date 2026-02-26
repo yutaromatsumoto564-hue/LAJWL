@@ -2,9 +2,23 @@ package com.jinwanli;
 
 import com.jinwanli.model.AttendanceRecord;
 import com.jinwanli.model.Employee;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.VerticalAlignment;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,6 +33,9 @@ public class AttendancePanel extends JPanel {
     private JComboBox<String> yearBox;
     private JComboBox<String> monthBox;
     private JLabel grandTotalLabel;
+
+    private JTable employeeTable;
+    private Runnable refreshEmp;
 
     public AttendancePanel() {
         setLayout(new BorderLayout());
@@ -44,16 +61,14 @@ public class AttendancePanel extends JPanel {
         queryPanel.add(new JLabel("年份:"));
         yearBox = new JComboBox<>(UIUtils.getRecentYears());
         yearBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
+        yearBox.addActionListener(e -> refreshMonthlyTable());
         queryPanel.add(yearBox);
 
         queryPanel.add(new JLabel("月份:"));
         monthBox = new JComboBox<>(new String[]{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"});
         monthBox.setSelectedItem(String.valueOf(Calendar.getInstance().get(Calendar.MONTH) + 1));
+        monthBox.addActionListener(e -> refreshMonthlyTable());
         queryPanel.add(monthBox);
-
-        JButton queryBtn = UIUtils.createButton("查询/刷新");
-        queryBtn.addActionListener(e -> refreshMonthlyTable());
-        queryPanel.add(queryBtn);
 
         JButton importBtn = UIUtils.createButton("导入考勤(Excel)");
         importBtn.addActionListener(e -> {
@@ -66,6 +81,7 @@ public class AttendancePanel extends JPanel {
                         (String) monthBox.getSelectedItem()
                     );
                     refreshMonthlyTable();
+                    refreshEmp.run();
                     JOptionPane.showMessageDialog(this, "考勤导入成功！");
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(this, "导入失败: " + ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
@@ -188,7 +204,7 @@ public class AttendancePanel extends JPanel {
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 10));
         bottomPanel.setBackground(UIUtils.COLOR_BG_CARD);
         grandTotalLabel = new JLabel("当月所有员工出勤总时长: 0.0 h");
-        grandTotalLabel.setFont(new Font("Microsoft YaHei", Font.BOLD, 16));
+        grandTotalLabel.setFont(new java.awt.Font("Microsoft YaHei", java.awt.Font.BOLD, 16));
         grandTotalLabel.setForeground(UIUtils.COLOR_PRIMARY);
         bottomPanel.add(grandTotalLabel);
 
@@ -280,18 +296,19 @@ public class AttendancePanel extends JPanel {
             }
         };
         JTable table = new JTable(model);
-        table.setRowHeight(30);
-        table.setFont(UIUtils.FONT_NORMAL);
-        table.getTableHeader().setBackground(UIUtils.COLOR_BG_CONTROL);
+        employeeTable = table;
+        employeeTable.setRowHeight(30);
+        employeeTable.setFont(UIUtils.FONT_NORMAL);
+        employeeTable.getTableHeader().setBackground(UIUtils.COLOR_BG_CONTROL);
 
-        Runnable refreshEmp = () -> {
+        refreshEmp = () -> {
             model.setRowCount(0);
             for(Employee e : DataManager.getInstance().getEmployees()) {
                 model.addRow(new Object[]{
                     e.getName(),
                     e.getPosition(),
-                    e.getPhone(),
-                    e.getIdCard()
+                    "-".equals(e.getPhone()) ? "" : e.getPhone(),
+                    "-".equals(e.getIdCard()) ? "" : e.getIdCard()
                 });
             }
         };
@@ -315,7 +332,7 @@ public class AttendancePanel extends JPanel {
 
         JButton delBtn = new JButton("删除员工");
         delBtn.addActionListener(e -> {
-            int row = table.getSelectedRow();
+            int row = employeeTable.getSelectedRow();
             if (row >= 0) {
                 if(JOptionPane.showConfirmDialog(panel, "确定删除该员工吗？") == JOptionPane.YES_OPTION) {
                     DataManager.getInstance().removeEmployee(row);
@@ -327,42 +344,99 @@ public class AttendancePanel extends JPanel {
             }
         });
 
-        JButton printBtn = new JButton("打印/预览工资单");
-        printBtn.setForeground(new Color(0, 102, 204));
-        printBtn.addActionListener(e -> {
-            int row = table.getSelectedRow();
-            if (row >= 0) {
-                String id = (String) table.getValueAt(row, 0);
-                Employee emp = DataManager.getInstance().getEmployeeById(id);
-                if(emp != null) printPayslip(emp);
-            } else {
-                JOptionPane.showMessageDialog(panel, "请先选择一名员工");
-            }
-        });
+        JButton printBtn = new JButton("打印全部员工信息");
+        printBtn.setForeground(new java.awt.Color(0, 102, 204));
+        printBtn.addActionListener(e -> printAllEmployeesInfo());
 
         btnPanel.add(addBtn);
         btnPanel.add(delBtn);
         btnPanel.add(printBtn);
 
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        panel.add(new JScrollPane(employeeTable), BorderLayout.CENTER);
         panel.add(btnPanel, BorderLayout.SOUTH);
         return panel;
     }
 
-    private void printPayslip(Employee e) {
-        Map<String, String> content = new LinkedHashMap<>();
-        content.put("员工姓名:", e.getName());
-        content.put("员工职位:", e.getPosition());
-        content.put("工号:", e.getId());
-        content.put("----------------", "--------------------");
-        content.put("基本工资:", String.format("%.2f", e.getBaseSalary()));
-        content.put("绩效奖金:", String.format("%.2f", e.getPerformanceSalary()));
-        content.put("加班补贴:", String.format("%.2f", e.getOvertimeSalary()));
-        content.put("扣除项:", "0.00");
-        content.put("----------------", "--------------------");
-        content.put("实发工资:", String.format("%.2f 元", e.getTotalSalary()));
+    private void printAllEmployeesInfo() {
+        List<Employee> employees = DataManager.getInstance().getEmployees();
+        
+        if (employees.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "没有员工信息可打印！", "提示", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        
+        generateEmployeeTablePdf(employees);
+    }
 
-        String footer = "金万里企业管理系统 - 薪资凭证\n请核对无误后签字确认。\n签字：__________";
-        PdfUtils.generateAndOpenPdf("工资单-" + e.getName(), "员工薪资单", content, footer);
+    private void generateEmployeeTablePdf(List<Employee> employees) {
+        try {
+            XSSFWorkbook workbook = new XSSFWorkbook();
+            Sheet sheet = workbook.createSheet("全部员工信息");
+
+            Row headerRow = sheet.createRow(0);
+            String[] headers = {"序号", "姓名", "电话", "身份证"};
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                
+                CellStyle headerStyle = workbook.createCellStyle();
+                Font headerFont = workbook.createFont();
+                headerFont.setBold(true);
+                headerFont.setFontHeightInPoints((short) 12);
+                headerStyle.setFont(headerFont);
+                headerStyle.setAlignment(HorizontalAlignment.CENTER);
+                headerStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+                headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                cell.setCellStyle(headerStyle);
+            }
+
+            for (int i = 0; i < employees.size(); i++) {
+                Employee emp = employees.get(i);
+                Row dataRow = sheet.createRow(i + 1);
+                
+                Cell indexCell = dataRow.createCell(0);
+                indexCell.setCellValue(i + 1);
+                
+                Cell nameCell = dataRow.createCell(1);
+                nameCell.setCellValue(emp.getName());
+                
+                Cell phoneCell = dataRow.createCell(2);
+                phoneCell.setCellValue(emp.getPhone());
+                
+                Cell idCardCell = dataRow.createCell(3);
+                idCardCell.setCellValue(emp.getIdCard());
+                
+                CellStyle dataStyle = workbook.createCellStyle();
+                dataStyle.setAlignment(HorizontalAlignment.LEFT);
+                dataStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+                
+                indexCell.setCellStyle(dataStyle);
+                nameCell.setCellStyle(dataStyle);
+                phoneCell.setCellStyle(dataStyle);
+                idCardCell.setCellStyle(dataStyle);
+            }
+
+            sheet.setColumnWidth(0, 3000);
+            sheet.setColumnWidth(1, 6000);
+            sheet.setColumnWidth(2, 6000);
+            sheet.setColumnWidth(3, 9000);
+
+            String fileName = "全部员工信息_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new java.util.Date()) + ".xlsx";
+            FileOutputStream fileOut = new FileOutputStream(fileName);
+            workbook.write(fileOut);
+            fileOut.close();
+            workbook.close();
+
+            if (Desktop.isDesktopSupported()) {
+                File excelFile = new File(fileName);
+                Desktop.getDesktop().open(excelFile);
+            } else {
+                JOptionPane.showMessageDialog(null, "Excel已生成，但系统不支持自动打开。\n文件路径: " + fileName);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Excel生成失败: " + e.getMessage());
+        }
     }
 }

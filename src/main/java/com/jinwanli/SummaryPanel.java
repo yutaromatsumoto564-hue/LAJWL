@@ -382,10 +382,10 @@ public class SummaryPanel extends JPanel {
                 }
             }
             
-            model.addRow(new Object[]{"【+】本月总收入(含注资)", String.format("%.2f", totalInc), "包含农产品出货营业额与各类注资补贴"});
-            model.addRow(new Object[]{"【-】本月杂项支出", String.format("%.2f", totalExp), "日常运营各类开销"});
-            model.addRow(new Object[]{"【-】薪资成本", String.format("%.2f", totalSal), "财务收支中的员工工资和月度工资总计"});
-            model.addRow(new Object[]{"【=】本月净利润", String.format("%.2f", totalInc - totalExp - totalSal), "当月最终核算利润结余"});
+            model.addRow(new Object[]{"本月总收入(含注资)", String.format("%.2f", totalInc), "包含农产品出货营业额与各类注资补贴"});
+            model.addRow(new Object[]{"本月杂项支出", String.format("%.2f", totalExp), "日常运营各类开销"});
+            model.addRow(new Object[]{"薪资成本", String.format("%.2f", totalSal), "财务收支中的员工工资和月度工资总计"});
+            model.addRow(new Object[]{"本月净利润", String.format("%.2f", totalInc - totalExp - totalSal), "当月最终核算利润结余"});
         }
 
         JTable table = new JTable(model);

@@ -5,7 +5,7 @@ import javax.swing.*;
 import java.awt.*;
 
 public class EmployeeDialog extends JDialog {
-    private JTextField nameField, phoneField, idCardField, totalSalaryField;
+    private JTextField nameField, phoneField, idCardField;
     private JComboBox<String> posBox;
     private boolean confirmed = false;
 
@@ -39,14 +39,10 @@ public class EmployeeDialog extends JDialog {
         addFormRow(formPanel, gbc, row++, "职位:", posBox);
         
         phoneField = UIUtils.createTextField();
-        addFormRow(formPanel, gbc, row++, "联系电话:", phoneField);
+        addFormRow(formPanel, gbc, row++, "联系电话", phoneField);
         
         idCardField = UIUtils.createTextField();
-        addFormRow(formPanel, gbc, row++, "身份证号:", idCardField);
-        
-        totalSalaryField = UIUtils.createTextField();
-        totalSalaryField.setText("0");
-        addFormRow(formPanel, gbc, row++, "总工资(元):", totalSalaryField);
+        addFormRow(formPanel, gbc, row++, "身份证号", idCardField);
         
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 15));
         btnPanel.setBackground(UIUtils.COLOR_BG_CARD);
@@ -91,20 +87,11 @@ public class EmployeeDialog extends JDialog {
             String pos = (String) posBox.getSelectedItem();
             String phone = phoneField.getText().trim();
             String idCard = idCardField.getText().trim();
-            double totalSalary = parseDouble(totalSalaryField.getText());
             
-            return new Employee(id, name, pos, phone, idCard, totalSalary, 0, 0);
+            return new Employee(id, name, pos, phone, idCard, 0, 0, 0);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "工资请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "输入格式错误！", "错误", JOptionPane.ERROR_MESSAGE);
             return null;
-        }
-    }
-    
-    private double parseDouble(String s) {
-        try {
-            return Double.parseDouble(s.trim());
-        } catch (Exception e) {
-            return 0;
         }
     }
 }
