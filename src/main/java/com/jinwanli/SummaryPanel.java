@@ -252,7 +252,7 @@ public class SummaryPanel extends JPanel {
                 }
             }
         } else if (type.equals("EXPENSE")) {
-            cols = new String[]{"日期", "分类", "关联项目", "金额(元)", "用途", "经手人"};
+            cols = new String[]{"日期", "分类", "金额(元)", "用途", "经手人"};
             model = new javax.swing.table.DefaultTableModel(cols, 0) {
                 @Override public boolean isCellEditable(int r, int c) { return false; }
             };
@@ -260,7 +260,6 @@ public class SummaryPanel extends JPanel {
                 if (e.getDate().startsWith(month) && !isIncomeCategory(e.getCategory())) {
                     model.addRow(new Object[]{
                         e.getDate(), e.getCategory(), 
-                        (e.getTargetProject() == null || e.getTargetProject().isEmpty()) ? "-" : e.getTargetProject(),
                         String.format("%.2f", e.getAmount()), e.getUsage(), e.getHandler()
                     });
                 }

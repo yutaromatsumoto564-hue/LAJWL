@@ -8,7 +8,7 @@ import java.util.Date;
 
 public class ExpenseDialog extends JDialog {
     private JComboBox<String> categoryBox;
-    private JTextField amountField, usageField, handlerField, dateField, projectField;
+    private JTextField amountField, usageField, handlerField, dateField;
     private boolean confirmed = false;
 
     public ExpenseDialog(JFrame parent, ExpenseRecord existingRecord) {
@@ -35,21 +35,12 @@ public class ExpenseDialog extends JDialog {
         
         int row = 0;
         categoryBox = UIUtils.createComboBox(new String[]{
-            "原材料采购", "车旅费", "伙食费", "电费", "房租", "设备维护", "项目投资", "其他支出", 
+            "材料采购", "车旅费", "伙食费", "电费", "项目投资", "其他支出", 
             "股东注资(收入)", "政府补贴(收入)", "其他(收入)"
         });
         addFormRow(formPanel, gbc, row++, "收支分类:", categoryBox);
         
-        projectField = UIUtils.createTextField();
-        projectField.setEnabled(false);
-        addFormRow(formPanel, gbc, row++, "关联项目:", projectField);
-        
-        categoryBox.addActionListener(e -> {
-            String selected = (String) categoryBox.getSelectedItem();
-            boolean isProject = selected.contains("项目") || selected.contains("注资");
-            projectField.setEnabled(isProject);
-            if (!isProject) projectField.setText("");
-        });
+
         
         amountField = UIUtils.createTextField();
         amountField.setText("0");
@@ -71,10 +62,6 @@ public class ExpenseDialog extends JDialog {
             usageField.setText(existingRecord.getUsage());
             handlerField.setText(existingRecord.getHandler());
             dateField.setText(existingRecord.getDate());
-            if (existingRecord.getCategory().contains("项目") || existingRecord.getCategory().contains("注资")) {
-                projectField.setEnabled(true);
-                projectField.setText(existingRecord.getTargetProject());
-            }
         }
         
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 15));
@@ -122,8 +109,7 @@ public class ExpenseDialog extends JDialog {
                 amount,
                 usageField.getText().trim(),
                 handlerField.getText().trim(),
-                "",
-                projectField.getText().trim()
+                ""
             );
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "金额输入错误！", "错误", JOptionPane.ERROR_MESSAGE);

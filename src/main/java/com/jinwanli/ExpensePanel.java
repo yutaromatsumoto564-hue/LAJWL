@@ -40,7 +40,7 @@ public class ExpensePanel extends JPanel {
         topPanel.add(addBtn);
         topPanel.add(deleteBtn);
 
-        String[] columnNames = {"日期", "收支分类", "关联项目", "金额(元)", "用途/备注", "经手人"};
+        String[] columnNames = {"日期", "收支分类", "金额(元)", "用途/备注", "经手人"};
         model = new DefaultTableModel(columnNames, 0) {
             @Override public boolean isCellEditable(int row, int col) { return true; }
             @Override
@@ -51,10 +51,9 @@ public class ExpensePanel extends JPanel {
                     switch (column) {
                         case 0: record.setDate(newValue); break;
                         case 1: record.setCategory(newValue); break;
-                        case 2: record.setTargetProject(newValue); break;
-                        case 3: record.setAmount(Double.parseDouble(newValue)); break;
-                        case 4: record.setUsage(newValue); break;
-                        case 5: record.setHandler(newValue); break;
+                        case 2: record.setAmount(Double.parseDouble(newValue)); break;
+                        case 3: record.setUsage(newValue); break;
+                        case 4: record.setHandler(newValue); break;
                     }
                     DataManager.getInstance().updateExpenseRecord(row, record);
                     super.setValueAt(aValue, row, column);
@@ -95,7 +94,6 @@ public class ExpensePanel extends JPanel {
         for (ExpenseRecord r : DataManager.getInstance().getExpenseRecords()) {
             model.addRow(new Object[]{
                 r.getDate(), r.getCategory(), 
-                (r.getTargetProject() == null || r.getTargetProject().isEmpty()) ? "-" : r.getTargetProject(),
                 String.format("%.2f", r.getAmount()), r.getUsage(), r.getHandler()
             });
         }
