@@ -15,9 +15,13 @@ public class MonthlySalaryDialog extends JDialog {
     private List<Employee> employees;
 
     public MonthlySalaryDialog(JFrame parent) {
+        this(parent, new SimpleDateFormat("yyyy-MM").format(new Date()));
+    }
+
+    public MonthlySalaryDialog(JFrame parent, String selectedMonth) {
         super(parent, "录入月度工资", true);
         setLayout(new BorderLayout());
-        setSize(450, 400);
+        setSize(450, 450);
         setLocationRelativeTo(parent);
         setResizable(false);
 
@@ -25,7 +29,7 @@ public class MonthlySalaryDialog extends JDialog {
 
         JPanel titlePanel = new JPanel();
         titlePanel.setBackground(UIUtils.COLOR_PRIMARY);
-        JLabel titleLabel = new JLabel("录入月度工资");
+        JLabel titleLabel = new JLabel("录入月度工资 - " + selectedMonth);
         titleLabel.setFont(UIUtils.FONT_HEADING);
         titleLabel.setForeground(Color.WHITE);
         titlePanel.add(titleLabel);
@@ -40,8 +44,11 @@ public class MonthlySalaryDialog extends JDialog {
         
         int row = 0;
         
+        // 月份字段 - 只读，显示从外部传递的月份
         monthField = UIUtils.createTextField();
-        monthField.setText(new SimpleDateFormat("yyyy-MM").format(new Date()));
+        monthField.setText(selectedMonth);
+        monthField.setEditable(false); // 设置为只读
+        monthField.setBackground(UIUtils.COLOR_BG_MAIN); // 设置背景色为灰色
         addFormRow(formPanel, gbc, row++, "月份:", monthField);
         
         String[] employeeNames = new String[employees.size()];
@@ -72,10 +79,6 @@ public class MonthlySalaryDialog extends JDialog {
         saveBtn.addActionListener(e -> {
             if(employeeBox.getSelectedItem() == null) {
                 JOptionPane.showMessageDialog(this, "请选择员工！", "提示", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            if(monthField.getText().trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this, "请输入月份！", "提示", JOptionPane.WARNING_MESSAGE);
                 return;
             }
             confirmed = true;

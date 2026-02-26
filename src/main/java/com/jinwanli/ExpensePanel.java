@@ -330,13 +330,14 @@ public class ExpensePanel extends JPanel {
         
         JButton addBtn = UIUtils.createButton("添加月度工资");
         addBtn.addActionListener(e -> {
-            MonthlySalaryDialog salaryDialog = new MonthlySalaryDialog((JFrame) SwingUtilities.getWindowAncestor(this));
+            String selectedMonth = (String) monthBox.getSelectedItem();
+            MonthlySalaryDialog salaryDialog = new MonthlySalaryDialog((JFrame) SwingUtilities.getWindowAncestor(this), selectedMonth);
             salaryDialog.setVisible(true);
             MonthlySalaryRecord record = salaryDialog.getData();
             if (record != null) {
                 DataManager.getInstance().addMonthlySalaryRecord(record);
                 // 刷新当前对话框的表格，显示新添加的记录
-                refreshSalaryTable(detailModel, (String) monthBox.getSelectedItem());
+                refreshSalaryTable(detailModel, selectedMonth);
             }
         });
         controlPanel.add(addBtn);
