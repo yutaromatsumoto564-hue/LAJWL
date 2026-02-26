@@ -1,6 +1,7 @@
 package com.jinwanli;
 
 import com.jinwanli.model.ExpenseRecord;
+import com.jinwanli.model.Employee;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -51,7 +52,7 @@ public class ExpensePanel extends JPanel {
         // 收支分类列表
         String[] categories = {
             "材料采购", "车旅费", "伙食费", "电费", "项目投资",
-            "其他支出", "股东注资(收入)", "政府补贴(收入)", "其他(收入)"
+            "其他支出", "股东注资(收入)", "政府补贴(收入)", "其他(收入)", "员工工资"
         };
 
         // 创建分类卡片
@@ -155,6 +156,12 @@ public class ExpensePanel extends JPanel {
     
     // 显示分类详情对话框
     private void showCategoryDetailDialog(String category) {
+        // 特殊处理员工工资卡片
+        if ("员工工资".equals(category)) {
+            showEmployeeSalaryDetailDialog();
+            return;
+        }
+        
         JDialog dialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), category + " 明细", true);
         dialog.setSize(800, 500);
         dialog.setLocationRelativeTo(this);
@@ -200,6 +207,77 @@ public class ExpensePanel extends JPanel {
                     r.getHandler()
                 });
             }
+        }
+        
+        JTable detailTable = new JTable(detailModel);
+        detailTable.setRowHeight(36);
+        detailTable.setFont(UIUtils.FONT_NORMAL);
+        detailTable.getTableHeader().setFont(UIUtils.FONT_BODY_BOLD);
+        
+        JScrollPane scrollPane = new JScrollPane(detailTable);
+        
+        // 底部按钮面板
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        btnPanel.setBackground(UIUtils.COLOR_BG_MAIN);
+        btnPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        JButton closeBtn = UIUtils.createSecondaryButton("关闭");
+        closeBtn.addActionListener(e -> dialog.setVisible(false));
+        btnPanel.add(closeBtn);
+        
+        dialog.add(topPanel, BorderLayout.NORTH);
+        dialog.add(scrollPane, BorderLayout.CENTER);
+        dialog.add(btnPanel, BorderLayout.SOUTH);
+        
+        dialog.setVisible(true);
+    }
+    
+    // 显示员工工资详情对话框
+    private void showEmployeeSalaryDetailDialog() {
+        JDialog dialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), "员工工资明细", true);
+        dialog.setSize(900, 550);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout());
+        
+        // 顶部面板
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setBackground(UIUtils.COLOR_BG_MAIN);
+        topPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        
+        JLabel titleLabel = new JLabel("员工工资明细");
+        titleLabel.setFont(UIUtils.FONT_HEADING);
+        titleLabel.setForeground(UIUtils.COLOR_TEXT_PRIMARY);
+        topPanel.add(titleLabel, BorderLayout.NORTH);
+        
+        JButton addBtn = UIUtils.createButton("添加员工");
+        addBtn.addActionListener(e -> {
+            EmployeeDialog employeeDialog = new EmployeeDialog((JFrame) SwingUtilities.getWindowAncestor(this));
+            employeeDialog.setVisible(true);
+            Employee employee = employeeDialog.getData();
+            if (employee != null) {
+                DataManager.getInstance().addEmployee(employee);
+                dialog.dispose();
+                showEmployeeSalaryDetailDialog();
+            }
+        });
+        topPanel.add(addBtn, BorderLayout.SOUTH);
+        
+        // 表格区域
+        String[] columnNames = {"姓名", "职位", "联系电话", "基本工资(元)", "绩效工资(元)", "加班补贴(元)", "预计总薪资(元)"};
+        javax.swing.table.DefaultTableModel detailModel = new javax.swing.table.DefaultTableModel(columnNames, 0) {
+            @Override public boolean isCellEditable(int row, int col) { return false; }
+        };
+        
+        for (Employee emp : DataManager.getInstance().getEmployees()) {
+            detailModel.addRow(new Object[]{
+                emp.getName(),
+                emp.getPosition(),
+                emp.getPhone(),
+                String.format("%.2f", emp.getBaseSalary()),
+                String.format("%.2f", emp.getPerformanceSalary()),
+                String.format("%.2f", emp.getOvertimeSalary()),
+                String.format("%.2f", emp.getTotalSalary())
+            });
         }
         
         JTable detailTable = new JTable(detailModel);
