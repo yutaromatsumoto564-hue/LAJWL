@@ -13,6 +13,11 @@ import java.util.List;
 public class ExpensePanel extends JPanel {
     private JTable table;
     private DefaultTableModel model;
+    private JPanel categoryPanel;
+    private String[] categories = {
+        "材料采购", "车旅费", "伙食费", "电费", "项目投资",
+        "其他支出", "股东注资(收入)", "政府补贴(收入)", "其他(收入)", "员工工资"
+    };
 
     public ExpensePanel() {
         setLayout(new BorderLayout());
@@ -47,15 +52,9 @@ public class ExpensePanel extends JPanel {
         topPanel.add(deleteBtn);
 
         // 分类卡片面板
-        JPanel categoryPanel = new JPanel(new GridLayout(2, 5, 10, 10));
+        categoryPanel = new JPanel(new GridLayout(2, 5, 10, 10));
         categoryPanel.setBackground(UIUtils.COLOR_BG_MAIN);
         categoryPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-
-        // 收支分类列表
-        String[] categories = {
-            "材料采购", "车旅费", "伙食费", "电费", "项目投资",
-            "其他支出", "股东注资(收入)", "政府补贴(收入)", "其他(收入)", "员工工资"
-        };
 
         // 创建分类卡片
         for (String category : categories) {
@@ -127,13 +126,26 @@ public class ExpensePanel extends JPanel {
         card.setPreferredSize(new Dimension(120, 80));
         card.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
+        // 卡片内容面板
+        JPanel contentPanel = new JPanel(new GridLayout(2, 1, 5, 5));
+        contentPanel.setBackground(UIUtils.COLOR_BG_CARD);
+        
         // 卡片标题
         JLabel titleLabel = new JLabel(category);
         titleLabel.setFont(new Font("Dialog", Font.BOLD, 16));
         titleLabel.setForeground(UIUtils.COLOR_TEXT_PRIMARY);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        titleLabel.setVerticalAlignment(SwingConstants.CENTER);
-        card.add(titleLabel, BorderLayout.CENTER);
+        contentPanel.add(titleLabel);
+        
+        // 计算并显示总金额
+        double totalAmount = calculateCategoryTotal(category);
+        JLabel amountLabel = new JLabel(String.format("%.2f 元", totalAmount));
+        amountLabel.setFont(new Font("Dialog", Font.PLAIN, 14));
+        amountLabel.setForeground(UIUtils.COLOR_TEXT_SECONDARY);
+        amountLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        contentPanel.add(amountLabel);
+        
+        card.add(contentPanel, BorderLayout.CENTER);
         
         // 鼠标点击事件
         card.addMouseListener(new MouseAdapter() {
@@ -145,15 +157,38 @@ public class ExpensePanel extends JPanel {
             @Override
             public void mouseEntered(MouseEvent e) {
                 card.setBackground(new Color(240, 240, 240));
+                contentPanel.setBackground(new Color(240, 240, 240));
             }
             
             @Override
             public void mouseExited(MouseEvent e) {
                 card.setBackground(UIUtils.COLOR_BG_CARD);
+                contentPanel.setBackground(UIUtils.COLOR_BG_CARD);
             }
         });
         
         return card;
+    }
+    
+    // 计算分类总金额
+    private double calculateCategoryTotal(String category) {
+        if ("员工工资".equals(category)) {
+            // 计算员工工资总额
+            double total = 0;
+            for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
+                total += record.getTotalSalary();
+            }
+            return total;
+        } else {
+            // 计算其他分类的总金额
+            double total = 0;
+            for (ExpenseRecord record : DataManager.getInstance().getExpenseRecords()) {
+                if (record.getCategory().equals(category)) {
+                    total += record.getAmount();
+                }
+            }
+            return total;
+        }
     }
     
     // 显示分类详情对话框
@@ -544,5 +579,19 @@ public class ExpensePanel extends JPanel {
                 String.format("%.2f", r.getAmount()), r.getUsage(), r.getHandler()
             });
         }
+        
+        // 刷新分类卡片的金额显示
+        refreshCategoryCards();
+    }
+    
+    // 刷新分类卡片的金额显示
+    private void refreshCategoryCards() {
+        categoryPanel.removeAll();
+        for (String category : categories) {
+            JPanel card = createCategoryCard(category);
+            categoryPanel.add(card);
+        }
+        categoryPanel.revalidate();
+        categoryPanel.repaint();
     }
 }
