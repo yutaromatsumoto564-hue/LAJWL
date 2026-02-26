@@ -121,9 +121,19 @@ public class SummaryPanel extends JPanel {
                     g2d.fillRect(xBase + 2 * (barWidth + spacing), height - padding - hSalary, barWidth, hSalary);
                     clickableBars.add(new BarRegion(new Rectangle(xBase + 2 * (barWidth + spacing), height - padding - hSalary, barWidth, hSalary), last6Months.get(i), "SALARY"));
 
+                    // 绘制日期标签，增大字体大小
                     g2d.setColor(UIUtils.COLOR_TEXT_SECONDARY);
-                    g2d.setFont(new Font("Dialog", Font.PLAIN, 12));
-                    g2d.drawString(last6Months.get(i), xBase + 5, height - padding + 20);
+                    g2d.setFont(new Font("Dialog", Font.PLAIN, 16)); // 增大字体大小到16
+                    g2d.drawString(last6Months.get(i), xBase + 5, height - padding + 25); // 调整位置以适应更大的字体
+                    
+                    // 添加日期标签的可点击区域
+                    FontMetrics fm = g2d.getFontMetrics();
+                    int textWidth = fm.stringWidth(last6Months.get(i));
+                    int textHeight = fm.getHeight();
+                    clickableBars.add(new BarRegion(
+                        new Rectangle(xBase + 5, height - padding + 15, textWidth, textHeight), 
+                        last6Months.get(i), "DATE"
+                    ));
                 }
             }
         };
@@ -140,7 +150,13 @@ public class SummaryPanel extends JPanel {
             public void mouseClicked(MouseEvent e) {
                 for (BarRegion bar : clickableBars) {
                     if (bar.bounds.contains(e.getPoint())) {
-                        showDetailDialog(bar.month, bar.type);
+                        if (bar.type.equals("DATE")) {
+                            // 点击日期标签，更新卡片为当月数据
+                            updateCardsForMonth(bar.month);
+                        } else {
+                            // 点击其他类型的柱子，显示明细
+                            showDetailDialog(bar.month, bar.type);
+                        }
                         break;
                     }
                 }
@@ -194,16 +210,20 @@ public class SummaryPanel extends JPanel {
 
     public void refreshData() {
         String currentMonth = new SimpleDateFormat("yyyy-MM").format(new Date());
+        updateCardsForMonth(currentMonth);
+    }
 
+    // 根据指定月份更新卡片数据
+    public void updateCardsForMonth(String month) {
         double currentIncome = 0;
         for (SalesRecord s : DataManager.getInstance().getSalesRecords()) {
-            if (s.getDate().startsWith(currentMonth)) currentIncome += s.getTotalAmount();
+            if (s.getDate().startsWith(month)) currentIncome += s.getTotalAmount();
         }
 
         double currentExpense = 0;
         double otherIncome = 0;
         for (ExpenseRecord e : DataManager.getInstance().getExpenseRecords()) {
-            if (e.getDate().startsWith(currentMonth)) {
+            if (e.getDate().startsWith(month)) {
                 if (isIncomeCategory(e.getCategory())) {
                     otherIncome += e.getAmount(); 
                 } else {
@@ -214,11 +234,11 @@ public class SummaryPanel extends JPanel {
 
         double currentSalary = 0;
         // 从月度工资记录中获取当月实际工资（包括当月已发放和上个月未发放的）
-        String lastMonth = getLastMonth(currentMonth);
+        String lastMonth = getLastMonth(month);
         
         for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
             // 当月已发放的工资
-            if (record.getMonth().equals(currentMonth) && "已发放".equals(record.getStatus())) {
+            if (record.getMonth().equals(month) && "已发放".equals(record.getStatus())) {
                 currentSalary += record.getTotalSalary();
             }
             // 上个月未发放的工资
@@ -241,7 +261,7 @@ public class SummaryPanel extends JPanel {
         salaryLabel.setText(String.format("%.2f 元", currentSalary));
         profitLabel.setText(String.format("%.2f 元", profit));
 
-        chartPanel.repaint();
+        // 不需要刷新图表，因为图表显示的是过去6个月的趋势
     }
 
     private void showDetailDialog(String month, String type) {
