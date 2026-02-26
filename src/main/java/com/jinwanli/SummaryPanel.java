@@ -472,7 +472,10 @@ public class SummaryPanel extends JPanel {
                             List<ExpenseRecord> expenses = DataManager.getInstance().getExpenseRecords();
                             for (int i = 0; i < expenses.size(); i++) {
                                 ExpenseRecord expense = expenses.get(i);
+                                // 提取分类名称（去掉【】括号）
+                                String categoryName = category.replace("【", "").replace("】", "");
                                 if (expense.getDate().equals(date) && 
+                                    expense.getCategory().equals(categoryName) &&
                                     expense.getHandler().equals(handler)) {
                                     // 更新支出记录
                                     try {
