@@ -417,6 +417,16 @@ public class ExpensePanel extends JPanel {
                             if (col >= 3 && col <= 5) {
                                 detailModel.setValueAt(String.format("%.2f", record.getTotalSalary()), row, 6);
                             }
+                            
+                            // 刷新经营总览
+                            MainFrame mainFrame = MainFrame.getInstance();
+                            if (mainFrame != null) {
+                                SummaryPanel summaryPanel = mainFrame.getSummaryPanel();
+                                if (summaryPanel != null) {
+                                    summaryPanel.refreshData();
+                                }
+                            }
+                            
                             break;
                         }
                     }

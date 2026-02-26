@@ -487,6 +487,15 @@ public class SummaryPanel extends JPanel {
                                 }
                             }
                         }
+                        
+                        // 刷新经营总览
+                        MainFrame mainFrame = MainFrame.getInstance();
+                        if (mainFrame != null) {
+                            SummaryPanel summaryPanel = mainFrame.getSummaryPanel();
+                            if (summaryPanel != null) {
+                                summaryPanel.refreshData();
+                            }
+                        }
                     } else if (type.equals("EXPENSE")) {
                         // 支出明细编辑处理
                         String date = (String) model.getValueAt(row, 0);
@@ -511,6 +520,15 @@ public class SummaryPanel extends JPanel {
                                     return;
                                 }
                                 break;
+                            }
+                        }
+                        
+                        // 刷新经营总览
+                        MainFrame mainFrame = MainFrame.getInstance();
+                        if (mainFrame != null) {
+                            SummaryPanel summaryPanel = mainFrame.getSummaryPanel();
+                            if (summaryPanel != null) {
+                                summaryPanel.refreshData();
                             }
                         }
                     } else if (type.equals("SALARY")) {
