@@ -78,25 +78,37 @@ public class SummaryPanel extends JPanel {
                             }
                         }
                     }
-                    for (Employee emp : DataManager.getInstance().getEmployees()) {
-                        salaries[i] += emp.getTotalSalary();
-                    }
-                    // 从月度工资记录中获取实际工资（包括当月已发放和上个月未发放的）
-                    String currentMonth = last6Months.get(i);
-                    String lastMonth = getLastMonth(currentMonth);
-                    double monthlySalary = 0;
-                    for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
-                        // 当月已发放的工资
-                        if (record.getMonth().equals(currentMonth) && "已发放".equals(record.getStatus())) {
-                            monthlySalary += record.getTotalSalary();
-                        }
-                        // 上个月未发放的工资
-                        if (record.getMonth().equals(lastMonth) && "未发放".equals(record.getStatus())) {
-                            monthlySalary += record.getTotalSalary();
+                    // 从财务收支记录中获取当月员工工资
+                    double monthlySalaryFromExpense = 0;
+                    for (ExpenseRecord e : DataManager.getInstance().getExpenseRecords()) {
+                        if (e.getDate().startsWith(m) && e.getCategory().equals("员工工资")) {
+                            monthlySalaryFromExpense += e.getAmount();
                         }
                     }
-                    if (monthlySalary > 0) {
-                        salaries[i] = monthlySalary; // 使用实际工资替换预估
+                    if (monthlySalaryFromExpense > 0) {
+                        salaries[i] = monthlySalaryFromExpense;
+                    } else {
+                        // 如果没有财务收支中的员工工资记录，使用月度工资记录
+                        for (Employee emp : DataManager.getInstance().getEmployees()) {
+                            salaries[i] += emp.getTotalSalary();
+                        }
+                        // 从月度工资记录中获取实际工资（包括当月已发放和上个月未发放的）
+                        String currentMonth = last6Months.get(i);
+                        String lastMonth = getLastMonth(currentMonth);
+                        double monthlySalary = 0;
+                        for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
+                            // 当月已发放的工资
+                            if (record.getMonth().equals(currentMonth) && "已发放".equals(record.getStatus())) {
+                                monthlySalary += record.getTotalSalary();
+                            }
+                            // 上个月未发放的工资
+                            if (record.getMonth().equals(lastMonth) && "未发放".equals(record.getStatus())) {
+                                monthlySalary += record.getTotalSalary();
+                            }
+                        }
+                        if (monthlySalary > 0) {
+                            salaries[i] = monthlySalary; // 使用实际工资替换预估
+                        }
                     }
                     maxVal = Math.max(maxVal, Math.max(incomes[i], Math.max(expenses[i], salaries[i])));
                 }
@@ -239,23 +251,32 @@ public class SummaryPanel extends JPanel {
         }
 
         double currentSalary = 0;
-        // 从月度工资记录中获取当月实际工资（包括当月已发放和上个月未发放的）
-        String lastMonth = getLastMonth(month);
-        
-        for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
-            // 当月已发放的工资
-            if (record.getMonth().equals(month) && "已发放".equals(record.getStatus())) {
-                currentSalary += record.getTotalSalary();
-            }
-            // 上个月未发放的工资
-            if (record.getMonth().equals(lastMonth) && "未发放".equals(record.getStatus())) {
-                currentSalary += record.getTotalSalary();
+        // 从财务收支记录中获取当月员工工资
+        for (ExpenseRecord e : DataManager.getInstance().getExpenseRecords()) {
+            if (e.getDate().startsWith(month) && e.getCategory().equals("员工工资")) {
+                currentSalary += e.getAmount();
             }
         }
-        // 如果没有月度工资记录，使用员工的固定薪资作为预估
+        // 如果没有财务收支中的员工工资记录，使用月度工资记录作为备选
         if (currentSalary == 0) {
-            for (Employee emp : DataManager.getInstance().getEmployees()) {
-                currentSalary += emp.getTotalSalary();
+            // 从月度工资记录中获取当月实际工资（包括当月已发放和上个月未发放的）
+            String lastMonth = getLastMonth(month);
+            
+            for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
+                // 当月已发放的工资
+                if (record.getMonth().equals(month) && "已发放".equals(record.getStatus())) {
+                    currentSalary += record.getTotalSalary();
+                }
+                // 上个月未发放的工资
+                if (record.getMonth().equals(lastMonth) && "未发放".equals(record.getStatus())) {
+                    currentSalary += record.getTotalSalary();
+                }
+            }
+            // 如果没有月度工资记录，使用员工的固定薪资作为预估
+            if (currentSalary == 0) {
+                for (Employee emp : DataManager.getInstance().getEmployees()) {
+                    currentSalary += emp.getTotalSalary();
+                }
             }
         }
 
@@ -324,43 +345,20 @@ public class SummaryPanel extends JPanel {
                 }
             }
         } else if (type.equals("SALARY")) {
-            cols = new String[]{"月份", "姓名", "职位", "基本工资(元)", "绩效(元)", "加班补贴(元)", "总薪资(元)", "状态"};
+            cols = new String[]{"日期", "分类", "金额(元)", "用途", "经手人"};
             model = new javax.swing.table.DefaultTableModel(cols, 0) {
-                @Override public boolean isCellEditable(int r, int c) { 
-                    return c != 7; // 状态列不可编辑
-                }
+                @Override public boolean isCellEditable(int r, int c) { return true; } // 允许编辑
             };
             
-            // 从月度工资记录中获取当月实际工资
-            boolean hasMonthlyRecords = false;
-            for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
-                if (record.getMonth().equals(month)) {
+            // 从财务收支记录中获取员工工资记录
+            for (ExpenseRecord e : DataManager.getInstance().getExpenseRecords()) {
+                if (e.getDate().startsWith(month) && e.getCategory().equals("员工工资")) {
                     model.addRow(new Object[]{
-                        record.getMonth(),
-                        record.getEmployeeName(),
-                        record.getEmployeePosition(),
-                        String.format("%.2f", record.getBaseSalary()),
-                        String.format("%.2f", record.getPerformanceSalary()),
-                        String.format("%.2f", record.getOvertimeSalary()),
-                        String.format("%.2f", record.getTotalSalary()),
-                        record.getStatus()
-                    });
-                    hasMonthlyRecords = true;
-                }
-            }
-            
-            // 如果没有月度工资记录，使用员工的固定薪资作为预估
-            if (!hasMonthlyRecords) {
-                for (Employee emp : DataManager.getInstance().getEmployees()) {
-                    model.addRow(new Object[]{
-                        month,
-                        emp.getName(),
-                        emp.getPosition(),
-                        String.format("%.2f", emp.getBaseSalary()),
-                        String.format("%.2f", emp.getPerformanceSalary()),
-                        String.format("%.2f", emp.getOvertimeSalary()),
-                        String.format("%.2f", emp.getTotalSalary()),
-                        "预估"
+                        e.getDate(),
+                        e.getCategory(),
+                        String.format("%.2f", e.getAmount()),
+                        e.getUsage(),
+                        e.getHandler()
                     });
                 }
             }
@@ -384,22 +382,31 @@ public class SummaryPanel extends JPanel {
             }
             
             double totalSal = 0;
-            // 从月度工资记录中获取当月实际工资（包括当月已发放和上个月未发放的）
-            String lastMonth = getLastMonth(month);
-            for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
-                // 当月已发放的工资
-                if (record.getMonth().equals(month) && "已发放".equals(record.getStatus())) {
-                    totalSal += record.getTotalSalary();
-                }
-                // 上个月未发放的工资
-                if (record.getMonth().equals(lastMonth) && "未发放".equals(record.getStatus())) {
-                    totalSal += record.getTotalSalary();
+            // 从财务收支记录中获取当月员工工资
+            for (ExpenseRecord e : DataManager.getInstance().getExpenseRecords()) {
+                if (e.getDate().startsWith(month) && e.getCategory().equals("员工工资")) {
+                    totalSal += e.getAmount();
                 }
             }
-            // 如果没有月度工资记录，使用员工的固定薪资作为预估
+            // 如果没有财务收支中的员工工资记录，使用月度工资记录作为备选
             if (totalSal == 0) {
-                for (Employee emp : DataManager.getInstance().getEmployees()) {
-                    totalSal += emp.getTotalSalary();
+                // 从月度工资记录中获取当月实际工资（包括当月已发放和上个月未发放的）
+                String lastMonth = getLastMonth(month);
+                for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
+                    // 当月已发放的工资
+                    if (record.getMonth().equals(month) && "已发放".equals(record.getStatus())) {
+                        totalSal += record.getTotalSalary();
+                    }
+                    // 上个月未发放的工资
+                    if (record.getMonth().equals(lastMonth) && "未发放".equals(record.getStatus())) {
+                        totalSal += record.getTotalSalary();
+                    }
+                }
+                // 如果没有月度工资记录，使用员工的固定薪资作为预估
+                if (totalSal == 0) {
+                    for (Employee emp : DataManager.getInstance().getEmployees()) {
+                        totalSal += emp.getTotalSalary();
+                    }
                 }
             }
             
@@ -413,46 +420,11 @@ public class SummaryPanel extends JPanel {
         table.setRowHeight(30);
         table.setFont(new Font("Dialog", Font.PLAIN, 14));
         
-        // 添加表格双击事件监听器，双击状态列自动切换状态
+        // 添加表格双击事件监听器
         table.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) { // 双击
-                    int row = table.rowAtPoint(e.getPoint());
-                    int col = table.columnAtPoint(e.getPoint());
-                    if (type.equals("SALARY") && col == 7) { // 薪资明细的状态列
-                        String month = (String) table.getValueAt(row, 0);
-                        String employeeName = (String) table.getValueAt(row, 1);
-                        String currentStatus = (String) table.getValueAt(row, 7);
-                        
-                        // 查找对应的记录
-                        List<MonthlySalaryRecord> records = DataManager.getInstance().getMonthlySalaryRecords();
-                        for (int i = 0; i < records.size(); i++) {
-                            MonthlySalaryRecord record = records.get(i);
-                            if (record.getMonth().equals(month) && record.getEmployeeName().equals(employeeName)) {
-                                // 切换状态
-                                String newStatus = "已发放".equals(currentStatus) ? "未发放" : "已发放";
-                                record.setStatus(newStatus);
-                                DataManager.getInstance().updateMonthlySalaryRecord(i, record);
-                                
-                                // 更新表格
-                                table.setValueAt(newStatus, row, 7);
-                                JOptionPane.showMessageDialog(dialog, "状态已修改为：" + newStatus, "成功", JOptionPane.INFORMATION_MESSAGE);
-                                
-                                // 刷新经营总览
-                                MainFrame mainFrame = MainFrame.getInstance();
-                                if (mainFrame != null) {
-                                    SummaryPanel summaryPanel = mainFrame.getSummaryPanel();
-                                    if (summaryPanel != null) {
-                                        summaryPanel.refreshData();
-                                    }
-                                }
-                                
-                                return;
-                            }
-                        }
-                    }
-                }
+                // 双击事件处理已移至表格编辑监听器
             }
         });
         
@@ -561,70 +533,41 @@ public class SummaryPanel extends JPanel {
                             }
                         }
                     } else if (type.equals("SALARY")) {
-                        // 薪资明细编辑处理
-                        String monthVal = (String) model.getValueAt(row, 0);
-                        String nameVal = (String) model.getValueAt(row, 1);
+                        // 薪资明细编辑处理（现在是财务收支记录）
+                        String date = (String) model.getValueAt(row, 0);
+                        String amountStr = (String) model.getValueAt(row, 2);
+                        String usage = (String) model.getValueAt(row, 3);
+                        String handler = (String) model.getValueAt(row, 4);
                         
-                        // 查找对应的月度工资记录
-                        List<MonthlySalaryRecord> records = DataManager.getInstance().getMonthlySalaryRecords();
-                        for (int i = 0; i < records.size(); i++) {
-                            MonthlySalaryRecord record = records.get(i);
-                            if (record.getMonth().equals(monthVal) && record.getEmployeeName().equals(nameVal)) {
-                                // 根据列索引更新不同字段
-                                switch (col) {
-                                    case 0: // 月份
-                                        record.setMonth((String) newValue);
-                                        break;
-                                    case 1: // 姓名
-                                        record.setEmployeeName((String) newValue);
-                                        break;
-                                    case 2: // 职位
-                                        record.setEmployeePosition((String) newValue);
-                                        break;
-                                    case 3: // 基本工资
-                                        try {
-                                            double baseSalary = Double.parseDouble(newValue.toString());
-                                            record.setBaseSalary(baseSalary);
-                                            record.setTotalSalary(baseSalary + record.getPerformanceSalary() + record.getOvertimeSalary());
-                                        } catch (Exception ex) {
-                                            JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
-                                            return;
-                                        }
-                                        break;
-                                    case 4: // 绩效
-                                        try {
-                                            double perfSalary = Double.parseDouble(newValue.toString());
-                                            record.setPerformanceSalary(perfSalary);
-                                            record.setTotalSalary(record.getBaseSalary() + perfSalary + record.getOvertimeSalary());
-                                        } catch (Exception ex) {
-                                            JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
-                                            return;
-                                        }
-                                        break;
-                                    case 5: // 加班补贴
-                                        try {
-                                            double overtime = Double.parseDouble(newValue.toString());
-                                            record.setOvertimeSalary(overtime);
-                                            record.setTotalSalary(record.getBaseSalary() + record.getPerformanceSalary() + overtime);
-                                        } catch (Exception ex) {
-                                            JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
-                                            return;
-                                        }
-                                        break;
-                                    case 7: // 状态
-                                        record.setStatus((String) newValue);
-                                        break;
-                                }
-                                // 更新记录
-                                DataManager.getInstance().updateMonthlySalaryRecord(i, record);
-                                // 更新总薪资列
-                                if (col >= 3 && col <= 5) {
-                                    model.setValueAt(String.format("%.2f", record.getTotalSalary()), row, 6);
+                        // 查找对应的支出记录
+                        List<ExpenseRecord> expenses = DataManager.getInstance().getExpenseRecords();
+                        for (int i = 0; i < expenses.size(); i++) {
+                            ExpenseRecord expense = expenses.get(i);
+                            if (expense.getDate().equals(date) && 
+                                expense.getCategory().equals("员工工资") &&
+                                expense.getUsage().equals(usage) && 
+                                expense.getHandler().equals(handler)) {
+                                // 更新支出记录
+                                try {
+                                    double amount = Double.parseDouble(amountStr);
+                                    expense.setAmount(amount);
+                                    DataManager.getInstance().updateExpenseRecord(i, expense);
+                                } catch (Exception ex) {
+                                    JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
+                                    return;
                                 }
                                 break;
                             }
                         }
-                    } else {
+                        
+                        // 刷新经营总览
+                        MainFrame mainFrame = MainFrame.getInstance();
+                        if (mainFrame != null) {
+                            SummaryPanel summaryPanel = mainFrame.getSummaryPanel();
+                            if (summaryPanel != null) {
+                                summaryPanel.refreshData();
+                            }
+                        }
                         // 净利润核算账单编辑处理
                         // 这里需要根据实际数据结构进行处理
                     }
