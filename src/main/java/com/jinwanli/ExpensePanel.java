@@ -290,7 +290,7 @@ public class ExpensePanel extends JPanel {
         // 表格区域
         String[] columnNames = {"月份", "员工姓名", "职位", "基本工资(元)", "绩效工资(元)", "加班补贴(元)", "总工资(元)", "状态"};
         javax.swing.table.DefaultTableModel detailModel = new javax.swing.table.DefaultTableModel(columnNames, 0) {
-            @Override public boolean isCellEditable(int row, int col) { return false; }
+            @Override public boolean isCellEditable(int row, int col) { return true; } // 允许编辑
         };
         
         // 添加表格数据
@@ -326,6 +326,82 @@ public class ExpensePanel extends JPanel {
                                 JOptionPane.showMessageDialog(dialog, "状态已修改为：已发放", "成功", JOptionPane.INFORMATION_MESSAGE);
                                 return;
                             }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // 添加表格编辑监听器
+        detailTable.getModel().addTableModelListener(new javax.swing.event.TableModelListener() {
+            @Override
+            public void tableChanged(javax.swing.event.TableModelEvent e) {
+                if (e.getType() == javax.swing.event.TableModelEvent.UPDATE) {
+                    int row = e.getFirstRow();
+                    int col = e.getColumn();
+                    Object newValue = detailModel.getValueAt(row, col);
+                    
+                    // 薪资明细编辑处理
+                    String monthVal = (String) detailModel.getValueAt(row, 0);
+                    String nameVal = (String) detailModel.getValueAt(row, 1);
+                    
+                    // 查找对应的月度工资记录
+                    List<MonthlySalaryRecord> records = DataManager.getInstance().getMonthlySalaryRecords();
+                    for (int i = 0; i < records.size(); i++) {
+                        MonthlySalaryRecord record = records.get(i);
+                        if (record.getMonth().equals(monthVal) && record.getEmployeeName().equals(nameVal)) {
+                            // 根据列索引更新不同字段
+                            switch (col) {
+                                case 0: // 月份
+                                    record.setMonth((String) newValue);
+                                    break;
+                                case 1: // 姓名
+                                    record.setEmployeeName((String) newValue);
+                                    break;
+                                case 2: // 职位
+                                    record.setEmployeePosition((String) newValue);
+                                    break;
+                                case 3: // 基本工资
+                                    try {
+                                        double baseSalary = Double.parseDouble(newValue.toString());
+                                        record.setBaseSalary(baseSalary);
+                                        record.setTotalSalary(baseSalary + record.getPerformanceSalary() + record.getOvertimeSalary());
+                                    } catch (Exception ex) {
+                                        JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
+                                        return;
+                                    }
+                                    break;
+                                case 4: // 绩效工资
+                                    try {
+                                        double perfSalary = Double.parseDouble(newValue.toString());
+                                        record.setPerformanceSalary(perfSalary);
+                                        record.setTotalSalary(record.getBaseSalary() + perfSalary + record.getOvertimeSalary());
+                                    } catch (Exception ex) {
+                                        JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
+                                        return;
+                                    }
+                                    break;
+                                case 5: // 加班补贴
+                                    try {
+                                        double overtime = Double.parseDouble(newValue.toString());
+                                        record.setOvertimeSalary(overtime);
+                                        record.setTotalSalary(record.getBaseSalary() + record.getPerformanceSalary() + overtime);
+                                    } catch (Exception ex) {
+                                        JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
+                                        return;
+                                    }
+                                    break;
+                                case 7: // 状态
+                                    record.setStatus((String) newValue);
+                                    break;
+                            }
+                            // 更新记录
+                            DataManager.getInstance().updateMonthlySalaryRecord(i, record);
+                            // 更新总薪资列
+                            if (col >= 3 && col <= 5) {
+                                detailModel.setValueAt(String.format("%.2f", record.getTotalSalary()), row, 6);
+                            }
+                            break;
                         }
                     }
                 }
