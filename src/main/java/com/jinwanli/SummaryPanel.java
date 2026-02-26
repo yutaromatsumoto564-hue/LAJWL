@@ -34,7 +34,7 @@ public class SummaryPanel extends JPanel {
         
         incomeLabel = createKPICard(cardsPanel, "本月总收入(含注资)", "0.00 元", UIUtils.COLOR_SUCCESS_LIGHT, UIUtils.COLOR_SUCCESS, "INCOME");
         expenseLabel = createKPICard(cardsPanel, "本月杂项支出", "0.00 元", UIUtils.COLOR_DANGER_LIGHT, UIUtils.COLOR_DANGER, "EXPENSE");
-        salaryLabel = createKPICard(cardsPanel, "预计薪资成本", "0.00 元", UIUtils.COLOR_WARNING_LIGHT, UIUtils.COLOR_WARNING, "SALARY");
+        salaryLabel = createKPICard(cardsPanel, "薪资成本", "0.00 元", UIUtils.COLOR_WARNING_LIGHT, UIUtils.COLOR_WARNING, "SALARY");
         profitLabel = createKPICard(cardsPanel, "本月净利润", "0.00 元", UIUtils.COLOR_PRIMARY_LIGHT, UIUtils.COLOR_PRIMARY, "PROFIT");
 
         add(cardsPanel, BorderLayout.NORTH);
@@ -230,7 +230,7 @@ public class SummaryPanel extends JPanel {
         String title;
         if (type.equals("INCOME")) title = month + " 收入明细(含注资)";
         else if (type.equals("EXPENSE")) title = month + " 杂项支出明细";
-        else if (type.equals("SALARY")) title = month + " 预计薪资成本明细";
+        else if (type.equals("SALARY")) title = month + " 薪资成本明细";
         else title = month + " 净利润核算账单";
 
         JDialog dialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), title, true);
