@@ -422,6 +422,36 @@ public class ExpensePanel extends JPanel {
         btnPanel.setBackground(UIUtils.COLOR_BG_MAIN);
         btnPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
+        JButton deleteBtn = UIUtils.createSecondaryButton("删除记录");
+        deleteBtn.addActionListener(e -> {
+            int selectedRow = detailTable.getSelectedRow();
+            if (selectedRow >= 0) {
+                int confirm = JOptionPane.showConfirmDialog(dialog, "确定要删除这条记录吗？", "确认删除", JOptionPane.YES_NO_OPTION);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    String month = (String) detailTable.getValueAt(selectedRow, 0);
+                    String employeeName = (String) detailTable.getValueAt(selectedRow, 1);
+                    
+                    // 查找对应的记录
+                    List<MonthlySalaryRecord> records = DataManager.getInstance().getMonthlySalaryRecords();
+                    for (int i = 0; i < records.size(); i++) {
+                        MonthlySalaryRecord record = records.get(i);
+                        if (record.getMonth().equals(month) && record.getEmployeeName().equals(employeeName)) {
+                            // 删除记录
+                            DataManager.getInstance().deleteMonthlySalaryRecord(i);
+                            
+                            // 更新表格
+                            detailModel.removeRow(selectedRow);
+                            JOptionPane.showMessageDialog(dialog, "记录已删除", "成功", JOptionPane.INFORMATION_MESSAGE);
+                            return;
+                        }
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(dialog, "请选择要删除的记录！", "提示", JOptionPane.WARNING_MESSAGE);
+            }
+        });
+        btnPanel.add(deleteBtn);
+        
         JButton changeStatusBtn = UIUtils.createButton("修改状态");
         changeStatusBtn.addActionListener(e -> {
             int selectedRow = detailTable.getSelectedRow();
