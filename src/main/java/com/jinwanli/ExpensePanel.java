@@ -301,7 +301,7 @@ public class ExpensePanel extends JPanel {
         detailTable.setFont(UIUtils.FONT_NORMAL);
         detailTable.getTableHeader().setFont(UIUtils.FONT_BODY_BOLD);
         
-        // 添加表格双击事件监听器，双击状态列自动切换为已发放
+        // 添加表格双击事件监听器，双击状态列自动切换状态
         detailTable.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -311,19 +311,21 @@ public class ExpensePanel extends JPanel {
                     if (col == 7) { // 状态列
                         String month = (String) detailTable.getValueAt(row, 0);
                         String employeeName = (String) detailTable.getValueAt(row, 1);
+                        String currentStatus = (String) detailTable.getValueAt(row, 7);
                         
                         // 查找对应的记录
                         List<MonthlySalaryRecord> records = DataManager.getInstance().getMonthlySalaryRecords();
                         for (int i = 0; i < records.size(); i++) {
                             MonthlySalaryRecord record = records.get(i);
                             if (record.getMonth().equals(month) && record.getEmployeeName().equals(employeeName)) {
-                                // 切换状态为已发放
-                                record.setStatus("已发放");
+                                // 切换状态
+                                String newStatus = "已发放".equals(currentStatus) ? "未发放" : "已发放";
+                                record.setStatus(newStatus);
                                 DataManager.getInstance().updateMonthlySalaryRecord(i, record);
                                 
                                 // 更新表格
-                                detailTable.setValueAt("已发放", row, 7);
-                                JOptionPane.showMessageDialog(dialog, "状态已修改为：已发放", "成功", JOptionPane.INFORMATION_MESSAGE);
+                                detailTable.setValueAt(newStatus, row, 7);
+                                JOptionPane.showMessageDialog(dialog, "状态已修改为：" + newStatus, "成功", JOptionPane.INFORMATION_MESSAGE);
                                 return;
                             }
                         }

@@ -385,6 +385,39 @@ public class SummaryPanel extends JPanel {
         table.setRowHeight(30);
         table.setFont(new Font("Dialog", Font.PLAIN, 14));
         
+        // 添加表格双击事件监听器，双击状态列自动切换状态
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) { // 双击
+                    int row = table.rowAtPoint(e.getPoint());
+                    int col = table.columnAtPoint(e.getPoint());
+                    if (type.equals("SALARY") && col == 7) { // 薪资明细的状态列
+                        String month = (String) table.getValueAt(row, 0);
+                        String employeeName = (String) table.getValueAt(row, 1);
+                        String currentStatus = (String) table.getValueAt(row, 7);
+                        
+                        // 查找对应的记录
+                        List<MonthlySalaryRecord> records = DataManager.getInstance().getMonthlySalaryRecords();
+                        for (int i = 0; i < records.size(); i++) {
+                            MonthlySalaryRecord record = records.get(i);
+                            if (record.getMonth().equals(month) && record.getEmployeeName().equals(employeeName)) {
+                                // 切换状态
+                                String newStatus = "已发放".equals(currentStatus) ? "未发放" : "已发放";
+                                record.setStatus(newStatus);
+                                DataManager.getInstance().updateMonthlySalaryRecord(i, record);
+                                
+                                // 更新表格
+                                table.setValueAt(newStatus, row, 7);
+                                JOptionPane.showMessageDialog(dialog, "状态已修改为：" + newStatus, "成功", JOptionPane.INFORMATION_MESSAGE);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
         // 添加表格编辑监听器
         table.getModel().addTableModelListener(new javax.swing.event.TableModelListener() {
             @Override
