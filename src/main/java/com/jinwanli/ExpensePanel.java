@@ -375,7 +375,7 @@ public class ExpensePanel extends JPanel {
         controlPanel.add(monthBox);
         
         // 表格区域
-        String[] columnNames = {"月份", "员工姓名", "职位", "总工资(元)", "状态"};
+        String[] columnNames = {"月份", "员工姓名", "职位", "总工资(元)"};
         javax.swing.table.DefaultTableModel detailModel = new javax.swing.table.DefaultTableModel(columnNames, 0) {
             // 存储记录ID的映射
             private Map<Integer, String> rowToRecordIdMap = new HashMap<>();
@@ -389,7 +389,7 @@ public class ExpensePanel extends JPanel {
             }
             
             @Override public boolean isCellEditable(int row, int col) { 
-                return col != 3; // 状态列不可编辑
+                return true; // 所有列都可编辑
             }
         };
         
@@ -417,51 +417,6 @@ public class ExpensePanel extends JPanel {
         detailTable.setRowHeight(36);
         detailTable.setFont(UIUtils.FONT_NORMAL);
         detailTable.getTableHeader().setFont(UIUtils.FONT_BODY_BOLD);
-        
-        // 添加表格双击事件监听器，双击状态列自动切换状态
-        detailTable.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) { // 双击
-                    int row = detailTable.rowAtPoint(e.getPoint());
-                    int col = detailTable.columnAtPoint(e.getPoint());
-                    if (col == 3) { // 状态列
-                        String month = (String) detailTable.getValueAt(row, 0);
-                        String employeeName = (String) detailTable.getValueAt(row, 1);
-                        String currentStatus = (String) detailTable.getValueAt(row, 3);
-                        
-                        // 查找对应的记录
-                        List<MonthlySalaryRecord> records = DataManager.getInstance().getMonthlySalaryRecords();
-                        for (int i = 0; i < records.size(); i++) {
-                            MonthlySalaryRecord record = records.get(i);
-                            if (record.getMonth().equals(month) && record.getEmployeeName().equals(employeeName)) {
-                                // 切换状态
-                                String newStatus = "已发放".equals(currentStatus) ? "未发放" : "已发放";
-                                record.setStatus(newStatus);
-                                DataManager.getInstance().updateMonthlySalaryRecord(i, record);
-                                
-                                // 更新表格
-                                detailTable.setValueAt(newStatus, row, 3);
-                                JOptionPane.showMessageDialog(dialog, "状态已修改为：" + newStatus, "成功", JOptionPane.INFORMATION_MESSAGE);
-                                
-                                // 刷新经营总览
-                                MainFrame mainFrame = MainFrame.getInstance();
-                                if (mainFrame != null) {
-                                    SummaryPanel summaryPanel = mainFrame.getSummaryPanel();
-                                    if (summaryPanel != null) {
-                                        summaryPanel.refreshData();
-                                    }
-                                }
-                                
-                                // 阻止事件继续传播，避免进入编辑模式
-                                e.consume();
-                                return;
-                            }
-                        }
-                    }
-                }
-            }
-        });
         
         // 添加表格编辑监听器
         detailTable.getModel().addTableModelListener(new javax.swing.event.TableModelListener() {
@@ -599,36 +554,6 @@ public class ExpensePanel extends JPanel {
         });
         btnPanel.add(deleteBtn);
         
-        JButton changeStatusBtn = UIUtils.createButton("修改状态");
-        changeStatusBtn.addActionListener(e -> {
-            int selectedRow = detailTable.getSelectedRow();
-            if (selectedRow >= 0) {
-                String month = (String) detailTable.getValueAt(selectedRow, 0);
-                String employeeName = (String) detailTable.getValueAt(selectedRow, 1);
-                String currentStatus = (String) detailTable.getValueAt(selectedRow, 7);
-                
-                // 查找对应的记录
-                List<MonthlySalaryRecord> records = DataManager.getInstance().getMonthlySalaryRecords();
-                for (int i = 0; i < records.size(); i++) {
-                    MonthlySalaryRecord record = records.get(i);
-                    if (record.getMonth().equals(month) && record.getEmployeeName().equals(employeeName)) {
-                        // 切换状态
-                        String newStatus = "未发放".equals(currentStatus) ? "已发放" : "未发放";
-                        record.setStatus(newStatus);
-                        DataManager.getInstance().updateMonthlySalaryRecord(i, record);
-                        
-                        // 更新表格
-                        detailTable.setValueAt(newStatus, selectedRow, 7);
-                        JOptionPane.showMessageDialog(dialog, "状态已修改为：" + newStatus, "成功", JOptionPane.INFORMATION_MESSAGE);
-                        return;
-                    }
-                }
-            } else {
-                JOptionPane.showMessageDialog(dialog, "请选择要修改状态的记录！", "提示", JOptionPane.WARNING_MESSAGE);
-            }
-        });
-        btnPanel.add(changeStatusBtn);
-        
         JButton closeBtn = UIUtils.createSecondaryButton("关闭");
         closeBtn.addActionListener(e -> dialog.setVisible(false));
         btnPanel.add(closeBtn);
@@ -650,8 +575,7 @@ public class ExpensePanel extends JPanel {
                     record.getMonth(),
                     record.getEmployeeName(),
                     record.getEmployeePosition(),
-                    String.format("%.2f", record.getTotalSalary()),
-                    record.getStatus()
+                    String.format("%.2f", record.getTotalSalary())
                 });
                 // 存储记录ID
                 if (model instanceof javax.swing.table.DefaultTableModel) {
