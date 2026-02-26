@@ -375,7 +375,7 @@ public class ExpensePanel extends JPanel {
         controlPanel.add(monthBox);
         
         // 表格区域
-        String[] columnNames = {"月份", "员工姓名", "职位", "基本工资(元)", "绩效工资(元)", "加班补贴(元)", "总工资(元)", "状态"};
+        String[] columnNames = {"月份", "员工姓名", "职位", "总工资(元)", "状态"};
         javax.swing.table.DefaultTableModel detailModel = new javax.swing.table.DefaultTableModel(columnNames, 0) {
             // 存储记录ID的映射
             private Map<Integer, String> rowToRecordIdMap = new HashMap<>();
@@ -389,7 +389,7 @@ public class ExpensePanel extends JPanel {
             }
             
             @Override public boolean isCellEditable(int row, int col) { 
-                return col != 7; // 状态列不可编辑
+                return col != 3; // 状态列不可编辑
             }
         };
         
@@ -425,10 +425,10 @@ public class ExpensePanel extends JPanel {
                 if (e.getClickCount() == 2) { // 双击
                     int row = detailTable.rowAtPoint(e.getPoint());
                     int col = detailTable.columnAtPoint(e.getPoint());
-                    if (col == 7) { // 状态列
+                    if (col == 3) { // 状态列
                         String month = (String) detailTable.getValueAt(row, 0);
                         String employeeName = (String) detailTable.getValueAt(row, 1);
-                        String currentStatus = (String) detailTable.getValueAt(row, 7);
+                        String currentStatus = (String) detailTable.getValueAt(row, 3);
                         
                         // 查找对应的记录
                         List<MonthlySalaryRecord> records = DataManager.getInstance().getMonthlySalaryRecords();
@@ -441,7 +441,7 @@ public class ExpensePanel extends JPanel {
                                 DataManager.getInstance().updateMonthlySalaryRecord(i, record);
                                 
                                 // 更新表格
-                                detailTable.setValueAt(newStatus, row, 7);
+                                detailTable.setValueAt(newStatus, row, 3);
                                 JOptionPane.showMessageDialog(dialog, "状态已修改为：" + newStatus, "成功", JOptionPane.INFORMATION_MESSAGE);
                                 
                                 // 刷新经营总览
@@ -502,46 +502,24 @@ public class ExpensePanel extends JPanel {
                                 case 2: // 职位
                                     record.setEmployeePosition((String) newValue);
                                     break;
-                                case 3: // 基本工资
+                                case 3: // 总工资
                                     try {
-                                        double baseSalary = Double.parseDouble(newValue.toString());
-                                        record.setBaseSalary(baseSalary);
-                                        record.setTotalSalary(baseSalary + record.getPerformanceSalary() + record.getOvertimeSalary());
+                                        double totalSalary = Double.parseDouble(newValue.toString());
+                                        record.setTotalSalary(totalSalary);
+                                        record.setBaseSalary(totalSalary);
+                                        record.setPerformanceSalary(0);
+                                        record.setOvertimeSalary(0);
                                     } catch (Exception ex) {
                                         JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
                                         return;
                                     }
                                     break;
-                                case 4: // 绩效工资
-                                    try {
-                                        double perfSalary = Double.parseDouble(newValue.toString());
-                                        record.setPerformanceSalary(perfSalary);
-                                        record.setTotalSalary(record.getBaseSalary() + perfSalary + record.getOvertimeSalary());
-                                    } catch (Exception ex) {
-                                        JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
-                                        return;
-                                    }
-                                    break;
-                                case 5: // 加班补贴
-                                    try {
-                                        double overtime = Double.parseDouble(newValue.toString());
-                                        record.setOvertimeSalary(overtime);
-                                        record.setTotalSalary(record.getBaseSalary() + record.getPerformanceSalary() + overtime);
-                                    } catch (Exception ex) {
-                                        JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
-                                        return;
-                                    }
-                                    break;
-                                case 7: // 状态
+                                case 4: // 状态
                                     record.setStatus((String) newValue);
                                     break;
                             }
                             // 更新记录
                             DataManager.getInstance().updateMonthlySalaryRecord(i, record);
-                            // 更新总薪资列
-                            if (col >= 3 && col <= 5) {
-                                detailModel.setValueAt(String.format("%.2f", record.getTotalSalary()), row, 6);
-                            }
                             
                             // 刷新经营总览
                             MainFrame mainFrame = MainFrame.getInstance();
@@ -672,9 +650,6 @@ public class ExpensePanel extends JPanel {
                     record.getMonth(),
                     record.getEmployeeName(),
                     record.getEmployeePosition(),
-                    String.format("%.2f", record.getBaseSalary()),
-                    String.format("%.2f", record.getPerformanceSalary()),
-                    String.format("%.2f", record.getOvertimeSalary()),
                     String.format("%.2f", record.getTotalSalary()),
                     record.getStatus()
                 });

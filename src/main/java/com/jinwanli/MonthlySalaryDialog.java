@@ -10,7 +10,7 @@ import java.util.List;
 
 public class MonthlySalaryDialog extends JDialog {
     private JComboBox<String> employeeBox;
-    private JTextField baseSalaryField, perfSalaryField, overtimeField, monthField;
+    private JTextField totalSalaryField, monthField;
     private boolean confirmed = false;
     private List<Employee> employees;
 
@@ -58,17 +58,9 @@ public class MonthlySalaryDialog extends JDialog {
         employeeBox = UIUtils.createComboBox(employeeNames);
         addFormRow(formPanel, gbc, row++, "员工:", employeeBox);
         
-        baseSalaryField = UIUtils.createTextField();
-        baseSalaryField.setText("0");
-        addFormRow(formPanel, gbc, row++, "基本工资(元):", baseSalaryField);
-        
-        perfSalaryField = UIUtils.createTextField();
-        perfSalaryField.setText("0");
-        addFormRow(formPanel, gbc, row++, "绩效工资(元):", perfSalaryField);
-        
-        overtimeField = UIUtils.createTextField();
-        overtimeField.setText("0");
-        addFormRow(formPanel, gbc, row++, "加班补贴(元):", overtimeField);
+        totalSalaryField = UIUtils.createTextField();
+        totalSalaryField.setText("0");
+        addFormRow(formPanel, gbc, row++, "总工资(元):", totalSalaryField);
         
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 15));
         btnPanel.setBackground(UIUtils.COLOR_BG_CARD);
@@ -121,12 +113,10 @@ public class MonthlySalaryDialog extends JDialog {
             if (selectedEmployee == null) return null;
             
             String id = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
-            double baseSalary = parseDouble(baseSalaryField.getText());
-            double perfSalary = parseDouble(perfSalaryField.getText());
-            double overtime = parseDouble(overtimeField.getText());
+            double totalSalary = parseDouble(totalSalaryField.getText());
             
             return new MonthlySalaryRecord(id, selectedEmployee.getId(), selectedEmployee.getName(), 
-                                          selectedEmployee.getPosition(), month, baseSalary, perfSalary, overtime);
+                                          selectedEmployee.getPosition(), month, totalSalary, 0, 0);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
             return null;
