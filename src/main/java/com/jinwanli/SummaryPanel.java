@@ -280,18 +280,43 @@ public class SummaryPanel extends JPanel {
                 }
             }
         } else if (type.equals("SALARY")) {
-            cols = new String[]{"姓名", "职位", "联系电话", "基本工资(元)", "绩效(元)", "加班补贴(元)", "预计总薪资(元)"};
+            cols = new String[]{"月份", "姓名", "职位", "基本工资(元)", "绩效(元)", "加班补贴(元)", "总薪资(元)", "状态"};
             model = new javax.swing.table.DefaultTableModel(cols, 0) {
                 @Override public boolean isCellEditable(int r, int c) { return false; }
             };
-            for (Employee emp : DataManager.getInstance().getEmployees()) {
-                model.addRow(new Object[]{
-                    emp.getName(), emp.getPosition(), emp.getPhone(),
-                    String.format("%.2f", emp.getBaseSalary()), 
-                    String.format("%.2f", emp.getPerformanceSalary()), 
-                    String.format("%.2f", emp.getOvertimeSalary()), 
-                    String.format("%.2f", emp.getTotalSalary())
-                });
+            
+            // 从月度工资记录中获取当月实际工资
+            boolean hasMonthlyRecords = false;
+            for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
+                if (record.getMonth().equals(month)) {
+                    model.addRow(new Object[]{
+                        record.getMonth(),
+                        record.getEmployeeName(),
+                        record.getEmployeePosition(),
+                        String.format("%.2f", record.getBaseSalary()),
+                        String.format("%.2f", record.getPerformanceSalary()),
+                        String.format("%.2f", record.getOvertimeSalary()),
+                        String.format("%.2f", record.getTotalSalary()),
+                        record.getStatus()
+                    });
+                    hasMonthlyRecords = true;
+                }
+            }
+            
+            // 如果没有月度工资记录，使用员工的固定薪资作为预估
+            if (!hasMonthlyRecords) {
+                for (Employee emp : DataManager.getInstance().getEmployees()) {
+                    model.addRow(new Object[]{
+                        month,
+                        emp.getName(),
+                        emp.getPosition(),
+                        String.format("%.2f", emp.getBaseSalary()),
+                        String.format("%.2f", emp.getPerformanceSalary()),
+                        String.format("%.2f", emp.getOvertimeSalary()),
+                        String.format("%.2f", emp.getTotalSalary()),
+                        "预估"
+                    });
+                }
             }
         } else {
             cols = new String[]{"核算项目", "金额(元)", "说明"};
@@ -313,13 +338,22 @@ public class SummaryPanel extends JPanel {
             }
             
             double totalSal = 0;
-            for (Employee emp : DataManager.getInstance().getEmployees()) {
-                totalSal += emp.getTotalSalary();
+            // 从月度工资记录中获取当月实际工资
+            for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
+                if (record.getMonth().equals(month)) {
+                    totalSal += record.getTotalSalary();
+                }
+            }
+            // 如果没有月度工资记录，使用员工的固定薪资作为预估
+            if (totalSal == 0) {
+                for (Employee emp : DataManager.getInstance().getEmployees()) {
+                    totalSal += emp.getTotalSalary();
+                }
             }
             
             model.addRow(new Object[]{"【+】本月总收入(含注资)", String.format("%.2f", totalInc), "包含农产品出货营业额与各类注资补贴"});
             model.addRow(new Object[]{"【-】本月杂项支出", String.format("%.2f", totalExp), "日常运营各类开销"});
-            model.addRow(new Object[]{"【-】预计薪资成本", String.format("%.2f", totalSal), "系统录入的所有员工薪资总计"});
+            model.addRow(new Object[]{"【-】薪资成本", String.format("%.2f", totalSal), "系统录入的所有员工薪资总计"});
             model.addRow(new Object[]{"【=】本月净利润", String.format("%.2f", totalInc - totalExp - totalSal), "当月最终核算利润结余"});
         }
 
