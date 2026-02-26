@@ -307,22 +307,7 @@ public class ExpensePanel extends JPanel {
         monthBox.setFont(UIUtils.FONT_BODY);
         controlPanel.add(monthBox);
         
-        JButton addBtn = UIUtils.createButton("添加月度工资");
-        addBtn.addActionListener(e -> {
-            MonthlySalaryDialog salaryDialog = new MonthlySalaryDialog((JFrame) SwingUtilities.getWindowAncestor(this));
-            salaryDialog.setVisible(true);
-            MonthlySalaryRecord record = salaryDialog.getData();
-            if (record != null) {
-                DataManager.getInstance().addMonthlySalaryRecord(record);
-                dialog.dispose();
-                showEmployeeSalaryDetailDialog();
-            }
-        });
-        controlPanel.add(addBtn);
-        
-        topPanel.add(controlPanel, BorderLayout.SOUTH);
-        
-        // 表格区域
+        // 表格模型
         String[] columnNames = {"月份", "员工姓名", "职位", "基本工资(元)", "绩效工资(元)", "加班补贴(元)", "总工资(元)", "状态"};
         javax.swing.table.DefaultTableModel detailModel = new javax.swing.table.DefaultTableModel(columnNames, 0) {
             @Override public boolean isCellEditable(int row, int col) { 
@@ -330,6 +315,22 @@ public class ExpensePanel extends JPanel {
             }
         };
         
+        JButton addBtn = UIUtils.createButton("添加月度工资");
+        addBtn.addActionListener(e -> {
+            MonthlySalaryDialog salaryDialog = new MonthlySalaryDialog((JFrame) SwingUtilities.getWindowAncestor(this));
+            salaryDialog.setVisible(true);
+            MonthlySalaryRecord record = salaryDialog.getData();
+            if (record != null) {
+                DataManager.getInstance().addMonthlySalaryRecord(record);
+                // 刷新当前对话框的表格，显示新添加的记录
+                refreshSalaryTable(detailModel, (String) monthBox.getSelectedItem());
+            }
+        });
+        controlPanel.add(addBtn);
+        
+        topPanel.add(controlPanel, BorderLayout.SOUTH);
+        
+        // 表格区域
         // 添加表格数据
         refreshSalaryTable(detailModel, (String) monthBox.getSelectedItem());
         
