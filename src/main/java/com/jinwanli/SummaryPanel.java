@@ -300,7 +300,9 @@ public class SummaryPanel extends JPanel {
         } else if (type.equals("SALARY")) {
             cols = new String[]{"月份", "姓名", "职位", "基本工资(元)", "绩效(元)", "加班补贴(元)", "总薪资(元)", "状态"};
             model = new javax.swing.table.DefaultTableModel(cols, 0) {
-                @Override public boolean isCellEditable(int r, int c) { return true; } // 允许编辑
+                @Override public boolean isCellEditable(int r, int c) { 
+                    return c != 7; // 状态列不可编辑
+                }
             };
             
             // 从月度工资记录中获取当月实际工资

@@ -290,7 +290,9 @@ public class ExpensePanel extends JPanel {
         // 表格区域
         String[] columnNames = {"月份", "员工姓名", "职位", "基本工资(元)", "绩效工资(元)", "加班补贴(元)", "总工资(元)", "状态"};
         javax.swing.table.DefaultTableModel detailModel = new javax.swing.table.DefaultTableModel(columnNames, 0) {
-            @Override public boolean isCellEditable(int row, int col) { return true; } // 允许编辑
+            @Override public boolean isCellEditable(int row, int col) { 
+                return col != 7; // 状态列不可编辑
+            }
         };
         
         // 添加表格数据
@@ -326,6 +328,9 @@ public class ExpensePanel extends JPanel {
                                 // 更新表格
                                 detailTable.setValueAt(newStatus, row, 7);
                                 JOptionPane.showMessageDialog(dialog, "状态已修改为：" + newStatus, "成功", JOptionPane.INFORMATION_MESSAGE);
+                                
+                                // 阻止事件继续传播，避免进入编辑模式
+                                e.consume();
                                 return;
                             }
                         }
