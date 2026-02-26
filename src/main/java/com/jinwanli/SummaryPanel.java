@@ -432,10 +432,77 @@ public class SummaryPanel extends JPanel {
                     // 根据表格类型处理不同的编辑逻辑
                     if (type.equals("INCOME")) {
                         // 收入明细编辑处理
-                        // 这里需要根据实际数据结构进行处理
+                        String date = (String) model.getValueAt(row, 0);
+                        String category = (String) model.getValueAt(row, 1);
+                        String amountStr = (String) model.getValueAt(row, 4);
+                        String handler = (String) model.getValueAt(row, 5);
+                        
+                        // 检查是否是销售记录（包含"出货"）
+                        if (category.contains("出货")) {
+                            // 查找对应的销售记录
+                            List<SalesRecord> sales = DataManager.getInstance().getSalesRecords();
+                            for (int i = 0; i < sales.size(); i++) {
+                                SalesRecord sale = sales.get(i);
+                                if (sale.getDate().equals(date) && 
+                                    sale.getHandler().equals(handler)) {
+                                    // 更新销售记录
+                                    try {
+                                        double amount = Double.parseDouble(amountStr);
+                                        sale.setTotalAmount(amount);
+                                        DataManager.getInstance().updateSalesRecord(i, sale);
+                                    } catch (Exception ex) {
+                                        JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
+                                        return;
+                                    }
+                                    break;
+                                }
+                            }
+                        } else {
+                            // 查找对应的支出记录（注资等）
+                            List<ExpenseRecord> expenses = DataManager.getInstance().getExpenseRecords();
+                            for (int i = 0; i < expenses.size(); i++) {
+                                ExpenseRecord expense = expenses.get(i);
+                                if (expense.getDate().equals(date) && 
+                                    expense.getHandler().equals(handler)) {
+                                    // 更新支出记录
+                                    try {
+                                        double amount = Double.parseDouble(amountStr);
+                                        expense.setAmount(amount);
+                                        DataManager.getInstance().updateExpenseRecord(i, expense);
+                                    } catch (Exception ex) {
+                                        JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
+                                        return;
+                                    }
+                                    break;
+                                }
+                            }
+                        }
                     } else if (type.equals("EXPENSE")) {
                         // 支出明细编辑处理
-                        // 这里需要根据实际数据结构进行处理
+                        String date = (String) model.getValueAt(row, 0);
+                        String amountStr = (String) model.getValueAt(row, 2);
+                        String usage = (String) model.getValueAt(row, 3);
+                        String handler = (String) model.getValueAt(row, 4);
+                        
+                        // 查找对应的支出记录
+                        List<ExpenseRecord> expenses = DataManager.getInstance().getExpenseRecords();
+                        for (int i = 0; i < expenses.size(); i++) {
+                            ExpenseRecord expense = expenses.get(i);
+                            if (expense.getDate().equals(date) && 
+                                expense.getUsage().equals(usage) && 
+                                expense.getHandler().equals(handler)) {
+                                // 更新支出记录
+                                try {
+                                    double amount = Double.parseDouble(amountStr);
+                                    expense.setAmount(amount);
+                                    DataManager.getInstance().updateExpenseRecord(i, expense);
+                                } catch (Exception ex) {
+                                    JOptionPane.showMessageDialog(dialog, "请输入有效数字！", "错误", JOptionPane.ERROR_MESSAGE);
+                                    return;
+                                }
+                                break;
+                            }
+                        }
                     } else if (type.equals("SALARY")) {
                         // 薪资明细编辑处理
                         String monthVal = (String) model.getValueAt(row, 0);
