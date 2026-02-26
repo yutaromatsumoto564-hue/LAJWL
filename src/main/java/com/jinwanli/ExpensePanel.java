@@ -20,6 +20,8 @@ public class ExpensePanel extends JPanel {
         "材料采购", "车旅费", "伙食费", "电费", "项目投资",
         "其他支出", "股东注资(收入)", "政府补贴(收入)", "其他(收入)", "员工工资"
     };
+    private JComboBox<String> monthBox;
+    private String currentMonth;
 
     public ExpensePanel() {
         setLayout(new BorderLayout());
@@ -28,6 +30,29 @@ public class ExpensePanel extends JPanel {
         // 顶部按钮面板
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
         topPanel.setBackground(UIUtils.COLOR_BG_MAIN);
+
+        // 月份选择器
+        JLabel monthLabel = new JLabel("选择月份:");
+        monthLabel.setFont(UIUtils.FONT_BODY);
+        topPanel.add(monthLabel);
+        
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM");
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        java.util.List<String> months = new java.util.ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            java.util.Calendar c = (java.util.Calendar) cal.clone();
+            c.add(java.util.Calendar.MONTH, -i);
+            months.add(sdf.format(c.getTime()));
+        }
+        
+        monthBox = new JComboBox<>(months.toArray(new String[0]));
+        monthBox.setFont(UIUtils.FONT_BODY);
+        currentMonth = (String) monthBox.getSelectedItem();
+        monthBox.addActionListener(e -> {
+            currentMonth = (String) monthBox.getSelectedItem();
+            refreshTable();
+        });
+        topPanel.add(monthBox);
 
         JButton addBtn = UIUtils.createButton("添加财务记录");
         addBtn.addActionListener(e -> {
@@ -178,14 +203,16 @@ public class ExpensePanel extends JPanel {
             // 计算员工工资总额
             double total = 0;
             for (MonthlySalaryRecord record : DataManager.getInstance().getMonthlySalaryRecords()) {
-                total += record.getTotalSalary();
+                if (record.getMonth().equals(currentMonth)) {
+                    total += record.getTotalSalary();
+                }
             }
             return total;
         } else {
             // 计算其他分类的总金额
             double total = 0;
             for (ExpenseRecord record : DataManager.getInstance().getExpenseRecords()) {
-                if (record.getCategory().equals(category)) {
+                if (record.getCategory().equals(category) && record.getDate().startsWith(currentMonth)) {
                     total += record.getAmount();
                 }
             }
@@ -285,6 +312,9 @@ public class ExpensePanel extends JPanel {
                             // 更新表格
                             detailModel.removeRow(selectedRow);
                             JOptionPane.showMessageDialog(dialog, "记录已删除", "成功", JOptionPane.INFORMATION_MESSAGE);
+                            
+                            // 刷新主面板的表格和卡片金额
+                            refreshTable();
                             return;
                         }
                     }
@@ -578,6 +608,9 @@ public class ExpensePanel extends JPanel {
                             // 更新表格
                             detailModel.removeRow(selectedRow);
                             JOptionPane.showMessageDialog(dialog, "记录已删除", "成功", JOptionPane.INFORMATION_MESSAGE);
+                            
+                            // 刷新主面板的表格和卡片金额
+                            refreshTable();
                             return;
                         }
                     }
@@ -661,10 +694,12 @@ public class ExpensePanel extends JPanel {
     public void refreshTable() {
         model.setRowCount(0);
         for (ExpenseRecord r : DataManager.getInstance().getExpenseRecords()) {
-            model.addRow(new Object[]{
-                r.getDate(), r.getCategory(), 
-                String.format("%.2f", r.getAmount()), r.getUsage(), r.getHandler()
-            });
+            if (r.getDate().startsWith(currentMonth)) {
+                model.addRow(new Object[]{
+                    r.getDate(), r.getCategory(), 
+                    String.format("%.2f", r.getAmount()), r.getUsage(), r.getHandler()
+                });
+            }
         }
         
         // 刷新分类卡片的金额显示
