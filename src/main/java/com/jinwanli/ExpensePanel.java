@@ -8,6 +8,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.List;
 
 public class ExpensePanel extends JPanel {
     private JTable table;
@@ -311,6 +312,36 @@ public class ExpensePanel extends JPanel {
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         btnPanel.setBackground(UIUtils.COLOR_BG_MAIN);
         btnPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        JButton changeStatusBtn = UIUtils.createButton("修改状态");
+        changeStatusBtn.addActionListener(e -> {
+            int selectedRow = detailTable.getSelectedRow();
+            if (selectedRow >= 0) {
+                String month = (String) detailTable.getValueAt(selectedRow, 0);
+                String employeeName = (String) detailTable.getValueAt(selectedRow, 1);
+                String currentStatus = (String) detailTable.getValueAt(selectedRow, 7);
+                
+                // 查找对应的记录
+                List<MonthlySalaryRecord> records = DataManager.getInstance().getMonthlySalaryRecords();
+                for (int i = 0; i < records.size(); i++) {
+                    MonthlySalaryRecord record = records.get(i);
+                    if (record.getMonth().equals(month) && record.getEmployeeName().equals(employeeName)) {
+                        // 切换状态
+                        String newStatus = "未发放".equals(currentStatus) ? "已发放" : "未发放";
+                        record.setStatus(newStatus);
+                        DataManager.getInstance().updateMonthlySalaryRecord(i, record);
+                        
+                        // 更新表格
+                        detailTable.setValueAt(newStatus, selectedRow, 7);
+                        JOptionPane.showMessageDialog(dialog, "状态已修改为：" + newStatus, "成功", JOptionPane.INFORMATION_MESSAGE);
+                        return;
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(dialog, "请选择要修改状态的记录！", "提示", JOptionPane.WARNING_MESSAGE);
+            }
+        });
+        btnPanel.add(changeStatusBtn);
         
         JButton closeBtn = UIUtils.createSecondaryButton("关闭");
         closeBtn.addActionListener(e -> dialog.setVisible(false));
